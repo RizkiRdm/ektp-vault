@@ -30,6 +30,7 @@ import com.example.ui.screens.AuditLogsScreen
 import com.example.ui.screens.DashboardScreen
 import com.example.ui.screens.ExportImportScreen
 import com.example.ui.screens.InitialSetupScreen
+import com.example.ui.screens.OnboardingScreen
 import com.example.ui.screens.PhysicalKeyManagerScreen
 import com.example.ui.screens.RecoveryPhraseScreen
 import com.example.ui.theme.MyApplicationTheme
@@ -182,6 +183,13 @@ fun VaultApp(
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) {
             when (val screen = uiState.currentScreen) {
+                is ScreenState.Onboarding -> {
+                    OnboardingScreen(
+                        onFinish = { viewModel.completeOnboarding() },
+                        onSkip = { viewModel.completeOnboarding() }
+                    )
+                }
+
                 is ScreenState.InitialSetup -> {
                     InitialSetupScreen(
                         onStartSetup = {

@@ -1,5 +1,10 @@
 package com.example.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -17,12 +22,16 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Casino
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
@@ -34,6 +43,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -48,7 +58,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -57,6 +69,9 @@ import androidx.compose.ui.unit.sp
 import com.example.domain.model.Credential
 import com.example.domain.model.SecurityCategory
 import com.example.domain.model.TargetType
+import com.example.ui.components.AppIconView
+import com.example.ui.components.AppPickerBottomSheet
+import com.example.ui.components.AppPickerHelper
 import com.example.ui.theme.AlertCrimson
 import com.example.ui.theme.CarbonGray
 import com.example.ui.theme.CoolHairline
@@ -93,6 +108,11 @@ fun AddEditCredentialScreen(
     }
     var notes by remember { mutableStateOf(existingCredential?.notes ?: "") }
     var validationError by remember { mutableStateOf<String?>(null) }
+
+    val context = LocalContext.current
+    val installedApps = remember { AppPickerHelper.getInstalledApps(context) }
+    var isAppPickerOpen by remember { mutableStateOf(false) }
+    var showManualPackageInput by remember { mutableStateOf(false) }
 
     val isEditing = existingCredential != null
 
@@ -270,26 +290,207 @@ fun AddEditCredentialScreen(
                 )
             }
             Spacer(modifier = Modifier.height(6.dp))
-            OutlinedTextField(
-                value = targetId,
-                onValueChange = { targetId = it },
-                shape = RoundedCornerShape(10.dp),
-                placeholder = {
-                    Text(if (targetType == TargetType.APP) "com.example.app" else "example.com")
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("target_id_input"),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = SovereignViolet,
-                    unfocusedBorderColor = CoolHairline,
-                    focusedTextColor = SovereignInk,
-                    unfocusedTextColor = SovereignInk,
-                    focusedContainerColor = SignalWhite,
-                    unfocusedContainerColor = SignalWhite
-                ),
-                singleLine = true
-            )
+
+            AnimatedVisibility(
+                visible = targetType == TargetType.APP,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                val selectedApp = installedApps.find { it.packageName == targetId }
+                Column {
+                    if (targetId.isNotBlank()) {
+                        // Visual selected app preview card
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(SignalWhite, RoundedCornerShape(12.dp))
+                                .border(1.5.dp, SovereignViolet, RoundedCornerShape(12.dp))
+                                .padding(12.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    AppIconView(icon = selectedApp?.icon, modifier = Modifier.size(36.dp))
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column {
+                                        Text(
+                                            text = selectedApp?.appName ?: serviceName.ifBlank { "Aplikasi Terpilih" },
+                                            color = SovereignInk,
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = targetId,
+                                            color = CarbonGray,
+                                            fontSize = 11.sp,
+                                            fontFamily = FontFamily.Monospace
+                                        )
+                                    }
+                                }
+                                OutlinedButton(
+                                    onClick = { isAppPickerOpen = true },
+                                    shape = RoundedCornerShape(9999.dp),
+                                    modifier = Modifier.testTag("change_app_button")
+                                ) {
+                                    Text("GANTI", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    } else {
+                        // Prominent Visual Button to Pick Installed App
+                        Button(
+                            onClick = { isAppPickerOpen = true },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp)
+                                .testTag("pick_installed_app_button"),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = SovereignInk,
+                                contentColor = SignalWhite
+                            )
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Apps,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Column {
+                                    Text(
+                                        text = "PILIH DARI APLIKASI TERINSTAL",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 0.5.sp
+                                    )
+                                    Text(
+                                        text = "Lihat nama & ikon aplikasi tanpa mengetik package name",
+                                        fontSize = 10.sp,
+                                        color = SignalWhite.copy(alpha = 0.8f)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Quick Popular App Presets
+                    Text(
+                        text = "APLIKASI POPULER CEPAT:",
+                        color = CarbonGray,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium,
+                        letterSpacing = 0.6.sp
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        items(AppPickerHelper.POPULAR_APPS.take(6)) { preset ->
+                            val isChosen = targetId == preset.packageName
+                            Box(
+                                modifier = Modifier
+                                    .clickable {
+                                        targetId = preset.packageName
+                                        if (serviceName.isBlank()) serviceName = preset.appName
+                                    }
+                                    .background(
+                                        if (isChosen) Color(0xFFEDE9FE) else SignalWhite,
+                                        RoundedCornerShape(9999.dp)
+                                    )
+                                    .border(
+                                        1.dp,
+                                        if (isChosen) SovereignViolet else CoolHairline,
+                                        RoundedCornerShape(9999.dp)
+                                    )
+                                    .padding(horizontal = 10.dp, vertical = 5.dp)
+                            ) {
+                                Text(
+                                    text = preset.appName,
+                                    color = if (isChosen) SovereignViolet else SovereignInk,
+                                    fontSize = 11.sp,
+                                    fontWeight = if (isChosen) FontWeight.Bold else FontWeight.Medium
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    // Manual package input toggle
+                    Row(
+                        modifier = Modifier
+                            .clickable { showManualPackageInput = !showManualPackageInput }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (showManualPackageInput) "▼ Sembunyikan Input Manual Package" else "▶ Atau Masukkan Package Name Manual",
+                            color = SovereignViolet,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+
+                    if (showManualPackageInput) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        OutlinedTextField(
+                            value = targetId,
+                            onValueChange = { targetId = it },
+                            shape = RoundedCornerShape(10.dp),
+                            placeholder = { Text("com.example.app") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("target_id_input"),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = SovereignViolet,
+                                unfocusedBorderColor = CoolHairline,
+                                focusedTextColor = SovereignInk,
+                                unfocusedTextColor = SovereignInk,
+                                focusedContainerColor = SignalWhite,
+                                unfocusedContainerColor = SignalWhite
+                            ),
+                            singleLine = true
+                        )
+                    }
+                }
+            }
+
+            AnimatedVisibility(
+                visible = targetType == TargetType.WEB,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Column {
+                    OutlinedTextField(
+                        value = targetId,
+                        onValueChange = { targetId = it },
+                        shape = RoundedCornerShape(10.dp),
+                        placeholder = { Text("example.com / console.neverhack.com") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("target_id_input"),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = SovereignViolet,
+                            unfocusedBorderColor = CoolHairline,
+                            focusedTextColor = SovereignInk,
+                            unfocusedTextColor = SovereignInk,
+                            focusedContainerColor = SignalWhite,
+                            unfocusedContainerColor = SignalWhite
+                        ),
+                        singleLine = true
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(14.dp))
 
@@ -536,5 +737,18 @@ fun AddEditCredentialScreen(
 
             Spacer(modifier = Modifier.height(30.dp))
         }
+
+        // Visual installed application picker bottom sheet
+        AppPickerBottomSheet(
+            isOpen = isAppPickerOpen,
+            apps = installedApps,
+            onDismiss = { isAppPickerOpen = false },
+            onAppSelected = { app ->
+                targetId = app.packageName
+                if (serviceName.isBlank()) {
+                    serviceName = app.appName
+                }
+            }
+        )
     }
 }

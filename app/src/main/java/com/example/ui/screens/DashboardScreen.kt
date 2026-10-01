@@ -251,6 +251,20 @@ fun DashboardScreen(
                                     onNavigate(ScreenState.AuditLogs)
                                 }
                             )
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        "PANDUAN / ONBOARDING",
+                                        color = SovereignInk,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                },
+                                onClick = {
+                                    showOptionsMenu = false
+                                    onNavigate(ScreenState.Onboarding)
+                                }
+                            )
                         }
                     }
                 },

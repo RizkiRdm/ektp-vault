@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 sealed class ScreenState {
+    data object Onboarding : ScreenState()
     data object Dashboard : ScreenState()
     data class AddEdit(val editingCredentialId: String? = null) : ScreenState()
     data class Detail(val credentialId: String) : ScreenState()
@@ -51,7 +52,7 @@ data class AuthSheetState(
 data class VaultUiState(
     val isInitialized: Boolean = false,
     val isUnlocked: Boolean = false,
-    val currentScreen: ScreenState = ScreenState.Dashboard,
+    val currentScreen: ScreenState = ScreenState.Onboarding,
     val searchQuery: String = "",
     val categoryFilter: SecurityCategory? = null,
     val activeCardLabel: String = "e-KTP (ID: ****89)",
@@ -110,12 +111,28 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun checkInitialization() {
         viewModelScope.launch {
+            val prefs = getApplication<Application>().getSharedPreferences("ktp_vault_prefs", android.content.Context.MODE_PRIVATE)
+            val onboardingCompleted = prefs.getBoolean("onboarding_completed", false)
             val initialized = repository.isVaultInitialized()
+
+            val initialScreen = when {
+                !onboardingCompleted -> ScreenState.Onboarding
+                !initialized -> ScreenState.InitialSetup
+                else -> ScreenState.Dashboard
+            }
+
             _uiState.value = _uiState.value.copy(
                 isInitialized = initialized,
-                currentScreen = if (!initialized) ScreenState.InitialSetup else ScreenState.Dashboard
+                currentScreen = initialScreen
             )
         }
+    }
+
+    fun completeOnboarding() {
+        val prefs = getApplication<Application>().getSharedPreferences("ktp_vault_prefs", android.content.Context.MODE_PRIVATE)
+        prefs.edit().putBoolean("onboarding_completed", true).apply()
+        val nextScreen = if (_uiState.value.isInitialized) ScreenState.Dashboard else ScreenState.InitialSetup
+        _uiState.value = _uiState.value.copy(currentScreen = nextScreen)
     }
 
     private fun observeLockState() {
