@@ -22,9 +22,11 @@ interface IVaultRepository {
     suspend fun getSecurityMeta(): SecurityMeta?
     suspend fun setupInitialVault(rawUid: String, biometricSecret: String, label: String): List<String>
     suspend fun authenticateWithCard(rawUid: String, biometricSecret: String): Result<PhysicalKey>
-    suspend fun registerNewPhysicalKey(rawUid: String, label: String, techList: List<String>): Result<Unit>
+    suspend fun registerNewPhysicalKey(rawUid: String, label: String, techList: List<String>, biometricSecret: String): Result<Unit>
     suspend fun removePhysicalKey(uidHash: String): Result<Unit>
-    suspend fun recoverVaultWithPhrase(phraseWords: List<String>, newRawUid: String, biometricSecret: String): Result<Unit>
+    suspend fun renamePhysicalKey(uidHash: String, newLabel: String): Result<Unit>
+    suspend fun makePhysicalKeyPrimary(uidHash: String): Result<Unit>
+    suspend fun recoverVaultWithPhrase(phraseWords: List<String>, newRawUid: String, biometricSecret: String, newLabel: String = "Primary e-KTP (Recovered)"): Result<Unit>
     suspend fun addCredential(serviceName: String, username: String, passwordPlain: String, targetType: TargetType, targetId: String, securityCategory: SecurityCategory, notes: String): Result<Unit>
     suspend fun updateCredential(id: String, serviceName: String, username: String, newPasswordPlain: String?, targetType: TargetType, targetId: String, securityCategory: SecurityCategory, notes: String): Result<Unit>
     suspend fun updateSecurityCategory(id: String, category: SecurityCategory): Result<Unit>
@@ -38,8 +40,11 @@ interface IVaultRepository {
 
 interface INfcReaderService {
     val tagDiscoveryFlow: StateFlow<NfcTagData?>
+    val nfcScanState: StateFlow<com.example.domain.model.NfcScanState>
     val isNfcAvailable: Boolean
     val isNfcEnabled: Boolean
+    fun resetScanState()
+    fun setScanState(state: com.example.domain.model.NfcScanState)
     fun enableReaderMode(activity: Activity)
     fun disableReaderMode(activity: Activity)
     fun processIntent(intent: Intent): NfcTagData?
@@ -49,7 +54,12 @@ interface INfcReaderService {
 
 interface ISecurityEngine {
     fun generateDeviceSalt(): String
+    fun generateVaultMasterKey(): ByteArray
     fun deriveMasterKey(nfcUid: String, biometricSecret: String, deviceSaltBase64: String): ByteArray
+    fun deriveKeyEncryptionKey(nfcUid: String, biometricSecret: String, deviceSaltBase64: String): ByteArray
+    fun deriveRecoveryKey(phrase: List<String>, deviceSaltBase64: String): ByteArray
+    fun wrapKey(keyToWrap: ByteArray, kekBytes: ByteArray): String
+    fun unwrapKey(wrappedBlobBase64: String, kekBytes: ByteArray): ByteArray
     fun hashNfcUid(rawUid: String): String
     fun encryptPassword(plaintext: String, masterKeyBytes: ByteArray): String
     fun decryptPassword(encryptedBlobBase64: String, masterKeyBytes: ByteArray): String

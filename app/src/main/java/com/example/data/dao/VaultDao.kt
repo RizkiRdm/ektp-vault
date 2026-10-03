@@ -56,17 +56,29 @@ interface CredentialDao {
 
 @Dao
 interface PhysicalKeyDao {
-    @Query("SELECT * FROM physical_keys ORDER BY registeredAt ASC")
+    @Query("SELECT * FROM physical_keys ORDER BY isPrimary DESC, registeredAt ASC")
     fun getAllPhysicalKeys(): Flow<List<PhysicalKeyEntity>>
 
     @Query("SELECT * FROM physical_keys WHERE uidHash = :uidHash LIMIT 1")
     suspend fun getPhysicalKeyByHash(uidHash: String): PhysicalKeyEntity?
+
+    @Query("SELECT * FROM physical_keys WHERE isPrimary = 1 LIMIT 1")
+    suspend fun getPrimaryKey(): PhysicalKeyEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPhysicalKey(key: PhysicalKeyEntity)
 
     @Delete
     suspend fun deletePhysicalKey(key: PhysicalKeyEntity)
+
+    @Query("DELETE FROM physical_keys WHERE uidHash = :uidHash")
+    suspend fun deletePhysicalKeyByHash(uidHash: String)
+
+    @Query("UPDATE physical_keys SET label = :newLabel WHERE uidHash = :uidHash")
+    suspend fun renameKey(uidHash: String, newLabel: String)
+
+    @Query("UPDATE physical_keys SET isPrimary = (uidHash = :primaryHash)")
+    suspend fun setOnlyOnePrimary(primaryHash: String)
 
     @Query("SELECT COUNT(*) FROM physical_keys")
     suspend fun getPhysicalKeysCount(): Int

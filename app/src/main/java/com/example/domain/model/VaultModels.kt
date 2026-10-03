@@ -1,5 +1,14 @@
 package com.example.domain.model
 
+enum class NfcScanState {
+    WAITING,
+    DETECTED,
+    READING,
+    VERIFYING,
+    SUCCESS,
+    FAILED
+}
+
 enum class SecurityCategory {
     STANDARD,
     HIGH_RISK

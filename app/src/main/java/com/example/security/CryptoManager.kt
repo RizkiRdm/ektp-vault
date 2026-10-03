@@ -47,6 +47,12 @@ object CryptoManager : ISecurityEngine {
         return Base64.encodeToString(salt, Base64.NO_WRAP)
     }
 
+    override fun generateVaultMasterKey(): ByteArray {
+        val key = ByteArray(32)
+        secureRandom.nextBytes(key)
+        return key
+    }
+
     override fun deriveMasterKey(nfcUid: String, biometricSecret: String, deviceSaltBase64: String): ByteArray {
         val combined = "$nfcUid:$biometricSecret".toCharArray()
         val salt = Base64.decode(deviceSaltBase64, Base64.NO_WRAP)
@@ -58,26 +64,43 @@ object CryptoManager : ISecurityEngine {
         return keyBytes
     }
 
+    override fun deriveKeyEncryptionKey(nfcUid: String, biometricSecret: String, deviceSaltBase64: String): ByteArray {
+        return deriveMasterKey(nfcUid, biometricSecret, deviceSaltBase64)
+    }
+
+    override fun deriveRecoveryKey(phrase: List<String>, deviceSaltBase64: String): ByteArray {
+        val normalized = phrase.joinToString(" ").trim().lowercase().toCharArray()
+        val salt = Base64.decode(deviceSaltBase64, Base64.NO_WRAP)
+        val spec = PBEKeySpec(normalized, salt, PBKDF2_ITERATIONS, KEY_LENGTH)
+        val factory = SecretKeyFactory.getInstance(PBKDF2_ALGORITHM)
+        val keyBytes = factory.generateSecret(spec).encoded
+        spec.clearPassword()
+        return keyBytes
+    }
+
+    override fun wrapKey(keyToWrap: ByteArray, kekBytes: ByteArray): String {
+        val encodedKey = Base64.encodeToString(keyToWrap, Base64.NO_WRAP)
+        return encryptWithSoftwareKey(encodedKey, kekBytes)
+    }
+
+    override fun unwrapKey(wrappedBlobBase64: String, kekBytes: ByteArray): ByteArray {
+        val encodedKey = decryptWithSoftwareKey(wrappedBlobBase64, kekBytes)
+        return Base64.decode(encodedKey, Base64.NO_WRAP)
+    }
+
     override fun hashNfcUid(rawUid: String): String {
         val digest = MessageDigest.getInstance("SHA-256")
         val hash = digest.digest(rawUid.toByteArray(Charsets.UTF_8))
         return hash.joinToString("") { "%02x".format(it) }
     }
 
+    // Vault Master Key is genuinely used to protect all credentials
     override fun encryptPassword(plaintext: String, masterKeyBytes: ByteArray): String {
-        return try {
-            KeystoreManager.encrypt(plaintext)
-        } catch (_: Exception) {
-            encryptWithSoftwareKey(plaintext, masterKeyBytes)
-        }
+        return encryptWithSoftwareKey(plaintext, masterKeyBytes)
     }
 
     override fun decryptPassword(encryptedBlobBase64: String, masterKeyBytes: ByteArray): String {
-        return try {
-            KeystoreManager.decrypt(encryptedBlobBase64)
-        } catch (_: Exception) {
-            decryptWithSoftwareKey(encryptedBlobBase64, masterKeyBytes)
-        }
+        return decryptWithSoftwareKey(encryptedBlobBase64, masterKeyBytes)
     }
 
     private fun encryptWithSoftwareKey(plaintext: String, masterKeyBytes: ByteArray): String {

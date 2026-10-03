@@ -18,8 +18,12 @@ class NfcReaderServiceImpl(
     private val delegate = NfcReaderService(context)
 
     override val tagDiscoveryFlow: StateFlow<NfcTagData?> = delegate.tagDiscoveryFlow
+    override val nfcScanState: StateFlow<com.example.domain.model.NfcScanState> = delegate.nfcScanState
     override val isNfcAvailable: Boolean get() = delegate.isNfcAvailable
     override val isNfcEnabled: Boolean get() = delegate.isNfcEnabled
+
+    override fun resetScanState() = delegate.resetScanState()
+    override fun setScanState(state: com.example.domain.model.NfcScanState) = delegate.setScanState(state)
 
     override fun enableReaderMode(activity: Activity) = delegate.enableReaderMode(activity)
     override fun disableReaderMode(activity: Activity) = delegate.disableReaderMode(activity)

@@ -14,7 +14,9 @@ import com.example.domain.usecase.ExportVaultUseCase
 import com.example.domain.usecase.GetAuditLogsUseCase
 import com.example.domain.usecase.GetCredentialsUseCase
 import com.example.domain.usecase.ImportVaultUseCase
+import com.example.domain.usecase.MakePhysicalKeyPrimaryUseCase
 import com.example.domain.usecase.RegisterPhysicalKeyUseCase
+import com.example.domain.usecase.RenamePhysicalKeyUseCase
 import com.example.domain.usecase.SaveCredentialUseCase
 import com.example.domain.usecase.SearchCredentialsUseCase
 import com.example.domain.usecase.VerifyNfcTagUseCase
@@ -33,6 +35,8 @@ interface AppContainer {
     val decryptCredentialUseCase: DecryptCredentialUseCase
     val authenticateWithNfcUseCase: AuthenticateWithNfcUseCase
     val registerPhysicalKeyUseCase: RegisterPhysicalKeyUseCase
+    val renamePhysicalKeyUseCase: RenamePhysicalKeyUseCase
+    val makePhysicalKeyPrimaryUseCase: MakePhysicalKeyPrimaryUseCase
     val verifyNfcTagUseCase: VerifyNfcTagUseCase
     val exportVaultUseCase: ExportVaultUseCase
     val importVaultUseCase: ImportVaultUseCase
@@ -88,6 +92,14 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
 
     override val registerPhysicalKeyUseCase: RegisterPhysicalKeyUseCase by lazy {
         RegisterPhysicalKeyUseCase(vaultRepository)
+    }
+
+    override val renamePhysicalKeyUseCase: RenamePhysicalKeyUseCase by lazy {
+        RenamePhysicalKeyUseCase(vaultRepository)
+    }
+
+    override val makePhysicalKeyPrimaryUseCase: MakePhysicalKeyPrimaryUseCase by lazy {
+        MakePhysicalKeyPrimaryUseCase(vaultRepository)
     }
 
     override val verifyNfcTagUseCase: VerifyNfcTagUseCase by lazy {

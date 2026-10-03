@@ -12,19 +12,23 @@ object KeyStorage {
     private val _isUnlocked = MutableStateFlow(false)
     val isUnlocked: StateFlow<Boolean> = _isUnlocked.asStateFlow()
 
-    private val _activeCardLabel = MutableStateFlow<String?>("e-KTP")
+    private val _activeCardLabel = MutableStateFlow<String?>(null)
     val activeCardLabel: StateFlow<String?> = _activeCardLabel.asStateFlow()
 
     private val _activeUidHash = MutableStateFlow<String?>(null)
     val activeUidHash: StateFlow<String?> = _activeUidHash.asStateFlow()
 
-    fun storeMasterKey(key: ByteArray, cardLabel: String, uidHash: String) {
-        // If an old key existed, wipe it first
+    private val _isSessionPrimary = MutableStateFlow(false)
+    val isSessionPrimary: StateFlow<Boolean> = _isSessionPrimary.asStateFlow()
+
+    fun storeMasterKey(key: ByteArray, cardLabel: String, uidHash: String, isPrimary: Boolean = false) {
+        // Wipe old key before storing new key
         clear()
         activeMasterKey = key.clone()
         keyCreatedTime = System.currentTimeMillis()
         _activeCardLabel.value = cardLabel
         _activeUidHash.value = uidHash
+        _isSessionPrimary.value = isPrimary
         _isUnlocked.value = true
     }
 
@@ -37,7 +41,7 @@ object KeyStorage {
         return activeMasterKey
     }
 
-    // Plan A: Single-Use Protection for High-Risk accounts
+    // High-Risk single-use auto wipe
     fun wipeImmediateHighRisk() {
         clear()
     }
@@ -46,6 +50,9 @@ object KeyStorage {
         activeMasterKey?.let { CryptoManager.wipeBytes(it) }
         activeMasterKey = null
         keyCreatedTime = 0
+        _activeCardLabel.value = null
+        _activeUidHash.value = null
+        _isSessionPrimary.value = false
         _isUnlocked.value = false
     }
 

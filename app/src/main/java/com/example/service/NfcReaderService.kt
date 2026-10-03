@@ -30,6 +30,9 @@ class NfcReaderService(
     private val _tagDiscoveryFlow = MutableStateFlow<NfcTagData?>(null)
     override val tagDiscoveryFlow: StateFlow<NfcTagData?> = _tagDiscoveryFlow.asStateFlow()
 
+    private val _nfcScanState = MutableStateFlow(com.example.domain.model.NfcScanState.WAITING)
+    override val nfcScanState: StateFlow<com.example.domain.model.NfcScanState> = _nfcScanState.asStateFlow()
+
     private var onTagDiscoveredListener: ((NfcTagData) -> Unit)? = null
 
     override val isNfcAvailable: Boolean
@@ -37,6 +40,51 @@ class NfcReaderService(
 
     override val isNfcEnabled: Boolean
         get() = nfcAdapter?.isEnabled == true
+
+    override fun resetScanState() {
+        _nfcScanState.value = com.example.domain.model.NfcScanState.WAITING
+    }
+
+    override fun setScanState(state: com.example.domain.model.NfcScanState) {
+        _nfcScanState.value = state
+    }
+
+    fun triggerHaptic(type: String) {
+        try {
+            val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? android.os.VibratorManager
+                vibratorManager?.defaultVibrator
+            } else {
+                @Suppress("DEPRECATION")
+                context.getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator
+            } ?: return
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                when (type) {
+                    "SUCCESS" -> {
+                        val timings = longArrayOf(0, 40, 50, 40)
+                        val amplitudes = intArrayOf(0, 180, 0, 220)
+                        vibrator.vibrate(android.os.VibrationEffect.createWaveform(timings, amplitudes, -1))
+                    }
+                    "FAILED" -> {
+                        vibrator.vibrate(android.os.VibrationEffect.createOneShot(220, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+                    }
+                    "DETECTED" -> {
+                        vibrator.vibrate(android.os.VibrationEffect.createOneShot(35, 120))
+                    }
+                }
+            } else {
+                @Suppress("DEPRECATION")
+                when (type) {
+                    "SUCCESS" -> vibrator.vibrate(longArrayOf(0, 40, 50, 40), -1)
+                    "FAILED" -> vibrator.vibrate(220)
+                    "DETECTED" -> vibrator.vibrate(35)
+                }
+            }
+        } catch (_: Exception) {
+            // Safe fallback
+        }
+    }
 
     fun setOnTagDiscoveredListener(listener: ((NfcTagData) -> Unit)?) {
         this.onTagDiscoveredListener = listener
@@ -64,7 +112,19 @@ class NfcReaderService(
 
     // Callback invoked on background thread when NFC hardware detects a tag
     override fun onTagDiscovered(tag: Tag) {
+        _nfcScanState.value = com.example.domain.model.NfcScanState.DETECTED
+        triggerHaptic("DETECTED")
+        _nfcScanState.value = com.example.domain.model.NfcScanState.READING
         val tagData = parseTag(tag)
+        _nfcScanState.value = com.example.domain.model.NfcScanState.VERIFYING
+        val isVerified = verifyEktpSignature(tagData)
+        if (isVerified) {
+            _nfcScanState.value = com.example.domain.model.NfcScanState.SUCCESS
+            triggerHaptic("SUCCESS")
+        } else {
+            _nfcScanState.value = com.example.domain.model.NfcScanState.FAILED
+            triggerHaptic("FAILED")
+        }
         _tagDiscoveryFlow.value = tagData
         onTagDiscoveredListener?.invoke(tagData)
     }

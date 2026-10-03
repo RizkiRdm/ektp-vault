@@ -38,7 +38,25 @@ class KtpAutofillService : AutofillService() {
             return
         }
 
-        val packageName = structure.activityComponent.packageName
+        val packageName = structure.activityComponent?.packageName ?: run {
+            callback.onSuccess(null)
+            return
+        }
+
+        // Never autofill the vault app itself
+        if (packageName == applicationContext.packageName) {
+            callback.onSuccess(null)
+            return
+        }
+
+        // Validate package name exists on the system
+        try {
+            packageManager.getPackageInfo(packageName, 0)
+        } catch (_: Exception) {
+            // Unverified or spoofed package
+            callback.onSuccess(null)
+            return
+        }
 
         serviceScope.launch {
             try {
@@ -59,14 +77,27 @@ class KtpAutofillService : AutofillService() {
                     return@launch
                 }
 
-                val responseBuilder = FillResponse.Builder()
                 val masterKey = KeyStorage.getMasterKey()
 
+                // Security requirement: Credentials are ONLY provided after authentication
+                if (masterKey == null) {
+                    // Vault is locked: Do not provide credentials without hardware authentication
+                    callback.onSuccess(null)
+                    return@launch
+                }
+
+                val responseBuilder = FillResponse.Builder()
+
                 for (cred in credentials) {
+                    // Strictly validate target application matches credential targetId
+                    if (!cred.targetId.equals(packageName, ignoreCase = true)) {
+                        continue
+                    }
+
                     val usernameId = usernameFields.firstOrNull()
                     val passwordId = passwordFields.firstOrNull()
 
-                    val presentation = RemoteViews(packageName, android.R.layout.simple_list_item_2).apply {
+                    val presentation = RemoteViews(applicationContext.packageName, android.R.layout.simple_list_item_2).apply {
                         setTextViewText(android.R.id.text1, cred.serviceName)
                         setTextViewText(android.R.id.text2, "KTP-Vault: ${cred.username}")
                     }
@@ -77,16 +108,15 @@ class KtpAutofillService : AutofillService() {
                         datasetBuilder.setValue(usernameId, AutofillValue.forText(cred.username))
                     }
 
-                    if (passwordId != null && masterKey != null) {
+                    if (passwordId != null) {
                         try {
                             val decrypted = CryptoManager.decryptPassword(cred.encryptedBlob, masterKey)
                             datasetBuilder.setValue(passwordId, AutofillValue.forText(decrypted))
                             if (cred.securityCategory == "HIGH_RISK") {
-                                // Plan A: auto-wipe after use
                                 KeyStorage.wipeImmediateHighRisk()
                             }
-                        } catch (e: Exception) {
-                            // If decryption fails or locked, skip password injection
+                        } catch (_: Exception) {
+                            // Skip password on decryption failure
                         }
                     }
 

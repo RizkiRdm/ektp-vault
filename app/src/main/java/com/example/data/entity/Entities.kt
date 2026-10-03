@@ -33,7 +33,8 @@ data class PhysicalKeyEntity(
     val techListRaw: String = "IsoDep,NfcA",
     val registeredAt: Long,
     val isPrimary: Boolean = false,
-    val cardType: String = "ISO 14443-4 e-KTP"
+    val cardType: String = "ISO 14443-4 e-KTP",
+    val wrappedMasterKey: String = ""
 )
 
 @Entity(tableName = "security_meta")
@@ -44,6 +45,7 @@ data class SecurityMetaEntity(
     val kdfType: String = "PBKDF2WithHmacSHA256",
     val iterations: Int = 65536,
     val recoveryPhraseHash: String,
+    val recoveryWrappedKey: String = "",
     val vaultInitialized: Boolean = false,
     val lastAuditTimestamp: Long = 0L
 )

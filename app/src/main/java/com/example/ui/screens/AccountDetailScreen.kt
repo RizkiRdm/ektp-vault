@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -85,6 +86,11 @@ fun AccountDetailScreen(
     var copiedLabel by remember { mutableStateOf<String?>(null) }
     val isHighRisk = credential.securityCategory == SecurityCategory.HIGH_RISK
 
+    BackHandler {
+        onHideAndScrub()
+        onBack()
+    }
+
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
@@ -145,7 +151,10 @@ fun AccountDetailScreen(
                 },
                 navigationIcon = {
                     IconButton(
-                        onClick = onBack,
+                        onClick = {
+                            onHideAndScrub()
+                            onBack()
+                        },
                         modifier = Modifier.testTag("detail_back_button")
                     ) {
                         Icon(

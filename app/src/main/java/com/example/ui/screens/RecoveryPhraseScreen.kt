@@ -69,7 +69,7 @@ fun RecoveryPhraseScreen(
     val clipboardManager: ClipboardManager = LocalClipboardManager.current
     var isRecoveryMode by remember { mutableStateOf(recoveryPhrase == null) }
     var inputWordsText by remember { mutableStateOf("") }
-    var inputNewUid by remember { mutableStateOf("04:F1:8A:22:90:33") }
+    var inputNewUid by remember { mutableStateOf("") }
     var copiedNote by remember { mutableStateOf<String?>(null) }
 
     Scaffold(

@@ -3,6 +3,8 @@ package com.example.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,6 +32,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
@@ -39,6 +42,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -98,6 +102,7 @@ fun DashboardScreen(
 ) {
     var showSearchBar by remember { mutableStateOf(false) }
     var showOptionsMenu by remember { mutableStateOf(false) }
+    var showHelpDialog by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val clipboardManager: ClipboardManager = LocalClipboardManager.current
 
@@ -106,6 +111,75 @@ fun DashboardScreen(
             snackbarHostState.showSnackbar(it)
             onClearStatusMessage()
         }
+    }
+
+    if (showHelpDialog) {
+        AlertDialog(
+            onDismissRequest = { showHelpDialog = false },
+            title = {
+                Text(
+                    text = "CARA KERJA BRANKAS KTP-VAULT",
+                    color = SovereignInk,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    letterSpacing = 0.5.sp
+                )
+            },
+            text = {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    Text(
+                        text = "1. Kunci Fisik (Physical Key):\nBrankas terkunci menggunakan microchip e-KTP Anda. Data Master Key dienkripsi dan hanya dapat dibuka saat kartu ditempelkan ke sensor NFC ponsel.",
+                        color = SovereignInk,
+                        fontSize = 12.sp,
+                        lineHeight = 17.sp
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = "2. Otorisasi Biometrik:\nSetiap akses membutuhkan sidik jari atau PIN perangkat Anda melalui Android Keystore. Jika kartu Anda dipegang orang lain, mereka tetap tidak dapat membukanya tanpa biometrik Anda.",
+                        color = SovereignInk,
+                        fontSize = 12.sp,
+                        lineHeight = 17.sp
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = "3. Penyimpanan Lokal Terisolasi:\nSeluruh password dienkripsi dengan standar AES-256-GCM langsung di HP (database lokal). Tidak ada data yang dikirim ke server.",
+                        color = SovereignInk,
+                        fontSize = 12.sp,
+                        lineHeight = 17.sp
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = "4. Pemulihan Darurat (Recovery Phrase):\nSimpan 12 kata pemulihan Anda di tempat rahasia untuk memulihkan brankas jika kartu e-KTP hilang.",
+                        color = SovereignInk,
+                        fontSize = 12.sp,
+                        lineHeight = 17.sp
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { showHelpDialog = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = SovereignInk),
+                    shape = RoundedCornerShape(9999.dp)
+                ) {
+                    Text("TUTUP", color = SignalWhite, fontWeight = FontWeight.Medium)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = {
+                        showHelpDialog = false
+                        onNavigate(ScreenState.Onboarding)
+                    },
+                    shape = RoundedCornerShape(9999.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, CoolHairline)
+                ) {
+                    Text("BUKA PANDUAN PENYIAPAN", color = SovereignViolet)
+                }
+            },
+            containerColor = SignalWhite,
+            shape = RoundedCornerShape(14.dp)
+        )
     }
 
     Scaffold(
@@ -122,7 +196,7 @@ fun DashboardScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "N",
+                                text = "K",
                                 color = SignalWhite,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp
@@ -130,27 +204,17 @@ fun DashboardScreen(
                         }
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = "NEVERHACK",
-                                    color = SovereignInk,
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = 0.5.sp
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "KTP-VAULT",
-                                    color = SovereignViolet,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Medium
-                                )
-                            }
                             Text(
-                                text = "SOVEREIGN CYBERSECURITY & HARDWARE TEE",
+                                text = "KTP-Vault",
+                                color = SovereignInk,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.2.sp
+                            )
+                            Text(
+                                text = "Brankas Kredensial e-KTP & Biometrik",
                                 color = CarbonGray,
-                                fontSize = 9.sp,
-                                letterSpacing = 0.8.sp
+                                fontSize = 10.sp
                             )
                         }
                     }
@@ -254,7 +318,21 @@ fun DashboardScreen(
                             DropdownMenuItem(
                                 text = {
                                     Text(
-                                        "PANDUAN / ONBOARDING",
+                                        "BANTUAN & CARA KERJA",
+                                        color = SovereignViolet,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                },
+                                onClick = {
+                                    showOptionsMenu = false
+                                    showHelpDialog = true
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        "PANDUAN PENYIAPAN (ONBOARDING)",
                                         color = SovereignInk,
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Medium

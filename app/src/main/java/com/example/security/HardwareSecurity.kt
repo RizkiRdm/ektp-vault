@@ -115,9 +115,11 @@ object BiometricHelper {
         try {
             prompt.authenticate(promptInfoBuilder.build())
         } catch (e: Exception) {
-            // Handle emulator or devices without configured biometrics/screen lock
-            val fallbackSecret = getOrGenerateBiometricSecret(activity)
-            onSuccess(fallbackSecret)
+            // Security: Never treat an exception as authentication success
+            onError(
+                BiometricPrompt.ERROR_UNABLE_TO_PROCESS,
+                e.localizedMessage ?: "Gagal memproses autentikasi biometrik pada perangkat."
+            )
         }
     }
 }

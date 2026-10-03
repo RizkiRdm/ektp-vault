@@ -52,8 +52,20 @@ class AuthenticateWithNfcUseCase(private val repository: IVaultRepository) {
 }
 
 class RegisterPhysicalKeyUseCase(private val repository: IVaultRepository) {
-    suspend operator fun invoke(rawUid: String, label: String, techList: List<String>): Result<Unit> {
-        return repository.registerNewPhysicalKey(rawUid, label, techList)
+    suspend operator fun invoke(rawUid: String, label: String, techList: List<String>, biometricSecret: String): Result<Unit> {
+        return repository.registerNewPhysicalKey(rawUid, label, techList, biometricSecret)
+    }
+}
+
+class RenamePhysicalKeyUseCase(private val repository: IVaultRepository) {
+    suspend operator fun invoke(uidHash: String, newLabel: String): Result<Unit> {
+        return repository.renamePhysicalKey(uidHash, newLabel)
+    }
+}
+
+class MakePhysicalKeyPrimaryUseCase(private val repository: IVaultRepository) {
+    suspend operator fun invoke(uidHash: String): Result<Unit> {
+        return repository.makePhysicalKeyPrimary(uidHash)
     }
 }
 

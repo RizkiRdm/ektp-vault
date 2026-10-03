@@ -43,6 +43,7 @@ class MainActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        KeyStorage.clear()
         enableEdgeToEdge()
 
         initNfc()
@@ -285,6 +286,7 @@ fun VaultApp(
                     }
                     PhysicalKeyManagerScreen(
                         physicalKeys = physicalKeys,
+                        currentSessionUidHash = uiState.currentSessionUidHash,
                         onBack = { viewModel.navigateTo(ScreenState.Dashboard) },
                         onRegisterNewKeyPrompt = { label ->
                             viewModel.openAuthSheet(
@@ -293,6 +295,12 @@ fun VaultApp(
                                 false,
                                 label
                             )
+                        },
+                        onRenameKey = { hash, label ->
+                            viewModel.renamePhysicalKey(hash, label)
+                        },
+                        onMakeKeyPrimary = { hash ->
+                            viewModel.makePhysicalKeyPrimary(hash)
                         },
                         onRemoveKey = { uidHash ->
                             viewModel.removePhysicalKey(uidHash)
@@ -344,8 +352,11 @@ fun VaultApp(
             AuthBottomSheet(
                 authSheetState = uiState.authSheet,
                 lockoutSeconds = uiState.lockoutSeconds,
+                nfcScanState = uiState.nfcScanState,
+                failureCount = uiState.failureCount,
                 lastDiscoveredTag = uiState.lastDiscoveredTag,
                 onDismiss = { viewModel.closeAuthSheet() },
+                onResetNfcScan = { viewModel.resetNfcScan() },
                 onRequestBiometricAuth = { rawUid ->
                     val title = when (uiState.authSheet.action) {
                         AuthSheetAction.SETUP_VAULT -> "Inisialisasi Keamanan Biometrik"

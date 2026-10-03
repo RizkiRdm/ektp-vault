@@ -86,7 +86,7 @@ fun ExportImportScreen(
 
     var importContent by remember { mutableStateOf("") }
     var importPassword by remember { mutableStateOf("") }
-    var importUid by remember { mutableStateOf("04:A2:3B:5F:7E:89") }
+    var importUid by remember { mutableStateOf("") }
     var importError by remember { mutableStateOf<String?>(null) }
 
     Scaffold(

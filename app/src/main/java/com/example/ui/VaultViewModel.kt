@@ -55,7 +55,7 @@ data class VaultUiState(
     val currentScreen: ScreenState = ScreenState.Onboarding,
     val searchQuery: String = "",
     val categoryFilter: SecurityCategory? = null,
-    val activeCardLabel: String = "e-KTP (ID: ****89)",
+    val activeCardLabel: String = "e-KTP",
     val authSheet: AuthSheetState = AuthSheetState(),
     val revealedPassword: String? = null,
     val revealCountdown: Int = 0,
@@ -64,7 +64,9 @@ data class VaultUiState(
     val lockoutSeconds: Int = 0,
     val statusMessage: String? = null,
     val exportedLokerContent: String? = null,
-    val lastDiscoveredTag: NfcTagData? = null
+    val lastDiscoveredTag: NfcTagData? = null,
+    val nfcScanState: com.example.domain.model.NfcScanState = com.example.domain.model.NfcScanState.WAITING,
+    val currentSessionUidHash: String? = null
 )
 
 class VaultViewModel(application: Application) : AndroidViewModel(application) {
@@ -147,12 +149,17 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             KeyStorage.activeCardLabel.collect { label ->
                 if (label != null) {
-                    val uidHash = KeyStorage.activeUidHash.value ?: "89"
-                    val shortId = uidHash.takeLast(4).uppercase()
+                    val uidHash = KeyStorage.activeUidHash.value ?: ""
+                    val shortId = if (uidHash.length >= 4) uidHash.takeLast(4).uppercase() else ""
                     _uiState.value = _uiState.value.copy(
-                        activeCardLabel = "$label (ID: ****$shortId)"
+                        activeCardLabel = if (shortId.isNotEmpty()) "$label (ID: ****$shortId)" else label
                     )
                 }
+            }
+        }
+        viewModelScope.launch {
+            KeyStorage.activeUidHash.collect { hash ->
+                _uiState.value = _uiState.value.copy(currentSessionUidHash = hash)
             }
         }
     }
@@ -165,6 +172,15 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
         }
+        viewModelScope.launch {
+            nfcService.nfcScanState.collect { state ->
+                _uiState.value = _uiState.value.copy(nfcScanState = state)
+            }
+        }
+    }
+
+    fun resetNfcScan() {
+        nfcService.resetScanState()
     }
 
     fun setSearchQuery(query: String) {
@@ -185,6 +201,7 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
             showStatus("Sistem dalam status Lockout. Tunggu ${_uiState.value.lockoutSeconds}s.")
             return
         }
+        nfcService.resetScanState()
         _uiState.value = _uiState.value.copy(
             authSheet = AuthSheetState(
                 isOpen = true,
@@ -254,7 +271,7 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 AuthSheetAction.ADD_PHYSICAL_KEY -> {
                     val techList = _uiState.value.lastDiscoveredTag?.techList ?: listOf("IsoDep", "NfcA")
-                    val regResult = container.registerPhysicalKeyUseCase(rawUid, sheet.pendingLabel, techList)
+                    val regResult = container.registerPhysicalKeyUseCase(rawUid, sheet.pendingLabel, techList, biometricSecret)
                     regResult.onSuccess {
                         closeAuthSheet()
                         repository.logAuditEvent("KEY_REGISTER", sheet.pendingLabel, "SUCCESS", "Registered physical NFC card $rawUid")
@@ -398,6 +415,28 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
                 showStatus("Kunci fisik berhasil dihapus.")
             }.onFailure { err ->
                 showStatus("Gagal menghapus kunci: ${err.message}")
+            }
+        }
+    }
+
+    fun renamePhysicalKey(uidHash: String, newLabel: String) {
+        viewModelScope.launch {
+            val res = container.renamePhysicalKeyUseCase(uidHash, newLabel)
+            res.onSuccess {
+                showStatus("Label kunci berhasil diperbarui.")
+            }.onFailure { err ->
+                showStatus("Gagal mengubah label: ${err.message}")
+            }
+        }
+    }
+
+    fun makePhysicalKeyPrimary(uidHash: String) {
+        viewModelScope.launch {
+            val res = container.makePhysicalKeyPrimaryUseCase(uidHash)
+            res.onSuccess {
+                showStatus("Kunci fisik berhasil ditetapkan sebagai Primary Key.")
+            }.onFailure { err ->
+                showStatus("Gagal menetapkan kunci utama: ${err.message}")
             }
         }
     }

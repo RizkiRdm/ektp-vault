@@ -3,13 +3,9 @@ package com.example.ui.screens
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -30,14 +26,21 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Fingerprint
+import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Nfc
-import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -52,7 +55,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
@@ -68,49 +70,96 @@ import com.example.ui.theme.SovereignInk
 import com.example.ui.theme.SovereignViolet
 
 data class OnboardingStep(
+    val stepNumber: Int,
     val eyebrow: String,
     val title: String,
     val subtitle: String,
     val description: String,
+    val buttonText: String,
     val icon: ImageVector,
     val accentColor: Color
 )
 
-val ONBOARDING_PAGES = listOf(
+val SETUP_FLOW_STEPS = listOf(
     OnboardingStep(
-        eyebrow = "LANGKAH 1 DARI 3 • FAKTOR FISIK",
-        title = "Jangkar Kriptografi Fisik e-KTP",
-        subtitle = "Hardware Security Anchor (ISO 14443-4)",
-        description = "KTP-Vault mengubah chip cerdas e-KTP Indonesia Anda menjadi kunci fisik perangkat keras (Physical Token). Master Key brankas diturunkan dari UID hardware kartu dan tidak dapat disalin.",
+        stepNumber = 1,
+        eyebrow = "LANGKAH 1 DARI 7 • CARA KERJA",
+        title = "Brankas Mandiri Berbasis e-KTP",
+        subtitle = "Zero-Cloud & Kontrol Penuh di Tangan Anda",
+        description = "KTP-Vault mengamankan data rahasia Anda menggunakan chip kartu e-KTP sebagai kunci fisik (Physical Token). Tidak ada server eksternal, dan data hanya dapat dibuka jika Anda menempelkan kartu fisik dan lolos verifikasi biometrik.",
+        buttonText = "Lanjut: Pendaftaran Kunci",
+        icon = Icons.Default.Shield,
+        accentColor = SovereignViolet
+    ),
+    OnboardingStep(
+        stepNumber = 2,
+        eyebrow = "LANGKAH 2 DARI 7 • KUNCI FISIK",
+        title = "Daftarkan e-KTP Sebagai Kunci Utama",
+        subtitle = "Proteksi Hardware ISO 14443-4",
+        description = "Setiap e-KTP memiliki chip pintar nirsentuh dengan ID unik. Brankas membuat Vault Master Key 256-bit dan membungkusnya secara kriptografis menggunakan kunci kartu Anda, sehingga brankas tidak dapat dibuka tanpa kartu tersebut.",
+        buttonText = "Lanjut: Atur Autentikasi",
         icon = Icons.Default.Nfc,
         accentColor = SovereignViolet
     ),
     OnboardingStep(
-        eyebrow = "LANGKAH 2 DARI 3 • ISOLASI PERANGKAT KERAS",
-        title = "Android Keystore & BiometricPrompt",
-        subtitle = "Keamanan Hardware TEE & StrongBox",
-        description = "Kunci simetris AES-256-GCM disimpan di Android Keystore System. Material kunci rahasia tidak pernah meninggalkan modul keamanan TEE, dan setiap akses dilindungi otorisasi biometrik.",
+        stepNumber = 3,
+        eyebrow = "LANGKAH 3 DARI 7 • AUTENTIKASI",
+        title = "Otorisasi Biometrik / PIN Perangkat",
+        subtitle = "Android Keystore System & TEE",
+        description = "Selain kartu fisik, setiap akses brankas dan dekripsi password dilindungi sidik jari atau PIN perangkat Anda. Jika orang lain menemukan kartu Anda, mereka tetap tidak dapat membuka brankas tanpa biometrik Anda.",
+        buttonText = "Lanjut: Recovery Cadangan",
         icon = Icons.Default.Fingerprint,
         accentColor = Color(0xFF10B981)
     ),
     OnboardingStep(
-        eyebrow = "LANGKAH 3 DARI 3 • KEDAULATAN DATA",
-        title = "Autofill Lokal & Zero-Knowledge",
-        subtitle = "Auto-Scrub RAM & Audit Trail Read-Only",
-        description = "Kredensial disimpan secara terenkripsi di Room Database lokal tanpa server cloud. Dilengkapi Autofill aplikasi terinstal, timer penghapusan RAM 15 detik, dan log audit tamper-evident.",
-        icon = Icons.Default.Security,
+        stepNumber = 4,
+        eyebrow = "LANGKAH 4 DARI 7 • PEMULIHAN",
+        title = "Recovery Phrase 12 Kata Darurat",
+        subtitle = "Pemulihan Tanpa Kehilangan Data",
+        description = "Saat membuat brankas, Anda akan mendapatkan 12 kata rahasia (Recovery Phrase). Jika e-KTP Anda rusak atau hilang, Anda dapat memulihkan seluruh akun dan mendaftarkan e-KTP baru menggunakan 12 kata ini.",
+        buttonText = "Lanjut: Pengaturan Autofill",
+        icon = Icons.Default.VpnKey,
+        accentColor = Color(0xFFD97706)
+    ),
+    OnboardingStep(
+        stepNumber = 5,
+        eyebrow = "LANGKAH 5 DARI 7 • AUTOFILL",
+        title = "Pengisian Otomatis Cepat & Aman",
+        subtitle = "Integrasi Layanan Autofill Android",
+        description = "KTP-Vault dapat mengisi otomatis username dan password langsung di layar login aplikasi perbankan atau web favorit Anda, hanya setelah otorisasi kartu berhasil.",
+        buttonText = "Lanjut: Buat Kredensial",
+        icon = Icons.Default.Key,
+        accentColor = SovereignViolet
+    ),
+    OnboardingStep(
+        stepNumber = 6,
+        eyebrow = "LANGKAH 6 DARI 7 • KREDENSIAL PERTAMA",
+        title = "Simpan Password Akun Pertama",
+        subtitle = "Pilih Aplikasi Langsung dari HP",
+        description = "Tidak perlu mengetik nama package aplikasi secara manual. Anda dapat memilih aplikasi perbankan atau sosial media langsung dari daftar aplikasi terpasang di perangkat Anda.",
+        buttonText = "Lanjut: Ringkasan Pengaturan",
+        icon = Icons.Default.Apps,
         accentColor = SovereignInk
+    ),
+    OnboardingStep(
+        stepNumber = 7,
+        eyebrow = "LANGKAH 7 DARI 7 • SELESAI",
+        title = "Brankas Anda Siap Digunakan",
+        subtitle = "Semua Perlindungan Beroperasi Penuh",
+        description = "Seluruh konsep keamanan kini telah siap. Silakan klik tombol di bawah untuk menempelkan e-KTP Anda dan memulai inisialisasi brankas pertama kali.",
+        buttonText = "Mulai Inisialisasi Brankas",
+        icon = Icons.Default.Check,
+        accentColor = Color(0xFF10B981)
     )
 )
 
-// Interactive Onboarding screen with animated transitions and skip option
 @Composable
 fun OnboardingScreen(
     onFinish: () -> Unit,
     onSkip: () -> Unit
 ) {
     var currentPage by remember { mutableIntStateOf(0) }
-    val step = ONBOARDING_PAGES[currentPage]
+    val step = SETUP_FLOW_STEPS[currentPage]
 
     val infiniteTransition = rememberInfiniteTransition(label = "pulse_trans")
     val pulseScale by infiniteTransition.animateFloat(
@@ -120,7 +169,7 @@ fun OnboardingScreen(
             animation = tween(1200, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "pulse"
+        label = "pulse_scale"
     )
 
     Scaffold(
@@ -130,211 +179,174 @@ fun OnboardingScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(horizontal = 24.dp, vertical = 16.dp)
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Top Bar with Skip Action
+            // Top Bar with Skip Button
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(24.dp)
-                            .background(SovereignInk, RoundedCornerShape(6.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("N", color = SignalWhite, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "NEVERHACK KTP-VAULT",
-                        color = SovereignInk,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp,
-                        letterSpacing = 0.5.sp
-                    )
-                }
+                Text(
+                    text = "PANDUAN PENYIAPAN",
+                    color = SovereignViolet,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 1.2.sp
+                )
 
-                // Skip button for fast acknowledgment
-                Box(
-                    modifier = Modifier
-                        .clickable(onClick = onSkip)
-                        .background(Color(0xFFEFEAFD), RoundedCornerShape(9999.dp))
-                        .padding(horizontal = 12.dp, vertical = 6.dp)
-                        .testTag("skip_onboarding_button")
+                OutlinedButton(
+                    onClick = onSkip,
+                    shape = RoundedCornerShape(9999.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, CoolHairline),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = CarbonGray),
+                    modifier = Modifier.testTag("skip_onboarding_button")
                 ) {
                     Text(
-                        text = "LEWATI",
-                        color = SovereignViolet,
+                        text = "Lewati",
                         fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.6.sp
+                        fontWeight = FontWeight.Medium
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.weight(0.4f))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // Animated interactive illustration
+            // Step Progress Indicator (Dots 1 to 7)
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(vertical = 8.dp)
+            ) {
+                SETUP_FLOW_STEPS.forEachIndexed { index, _ ->
+                    val isSelected = index == currentPage
+                    val isCompleted = index < currentPage
+                    Box(
+                        modifier = Modifier
+                            .height(8.dp)
+                            .width(if (isSelected) 24.dp else 8.dp)
+                            .background(
+                                color = if (isSelected) SovereignViolet else if (isCompleted) Color(0xFF10B981) else CoolHairline,
+                                shape = RoundedCornerShape(9999.dp)
+                            )
+                            .clickable { currentPage = index }
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Animated Content Section
             AnimatedContent(
-                targetState = currentPage,
+                targetState = step,
                 transitionSpec = {
-                    if (targetState > initialState) {
-                        slideInHorizontally { width -> width } + fadeIn() togetherWith
-                                slideOutHorizontally { width -> -width } + fadeOut()
+                    if (targetState.stepNumber > initialState.stepNumber) {
+                        (slideInHorizontally { width -> width } + fadeIn()).togetherWith(
+                            slideOutHorizontally { width -> -width } + fadeOut()
+                        )
                     } else {
-                        slideInHorizontally { width -> -width } + fadeIn() togetherWith
-                                slideOutHorizontally { width -> width } + fadeOut()
+                        (slideInHorizontally { width -> -width } + fadeIn()).togetherWith(
+                            slideOutHorizontally { width -> width } + fadeOut()
+                        )
                     }
                 },
-                label = "page_transition"
-            ) { pageIndex ->
-                val currentStep = ONBOARDING_PAGES[pageIndex]
+                label = "step_animation"
+            ) { targetStep ->
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    // Pulsating hardware graphic
+                    // Hero Icon Box
                     Box(
                         modifier = Modifier
-                            .size(130.dp)
+                            .size(100.dp)
                             .scale(pulseScale)
-                            .shadow(8.dp, CircleShape, ambientColor = currentStep.accentColor)
-                            .background(SignalWhite, CircleShape)
-                            .border(2.dp, currentStep.accentColor, CircleShape),
+                            .background(Color(0xFFF0EBFD), CircleShape)
+                            .border(2.dp, targetStep.accentColor, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(105.dp)
-                                .background(currentStep.accentColor.copy(alpha = 0.12f), CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = currentStep.icon,
-                                contentDescription = null,
-                                tint = currentStep.accentColor,
-                                modifier = Modifier.size(54.dp)
-                            )
-                        }
+                        Icon(
+                            imageVector = targetStep.icon,
+                            contentDescription = targetStep.title,
+                            tint = targetStep.accentColor,
+                            modifier = Modifier.size(44.dp)
+                        )
                     }
 
-                    Spacer(modifier = Modifier.height(28.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
 
                     Text(
-                        text = currentStep.eyebrow,
-                        color = currentStep.accentColor,
+                        text = targetStep.eyebrow,
+                        color = SovereignViolet,
                         fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.2.sp
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = 1.sp
                     )
 
                     Spacer(modifier = Modifier.height(6.dp))
 
                     Text(
-                        text = currentStep.title,
+                        text = targetStep.title,
                         color = SovereignInk,
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center
+                        textAlign = TextAlign.Center,
+                        lineHeight = 28.sp
                     )
 
                     Spacer(modifier = Modifier.height(4.dp))
 
                     Text(
-                        text = currentStep.subtitle,
+                        text = targetStep.subtitle,
                         color = CarbonGray,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
                         textAlign = TextAlign.Center
                     )
 
-                    Spacer(modifier = Modifier.height(14.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
+                    // Description Card
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .background(SignalWhite, RoundedCornerShape(14.dp))
                             .border(1.dp, CoolHairline, RoundedCornerShape(14.dp))
-                            .padding(16.dp)
+                            .padding(18.dp)
                     ) {
                         Text(
-                            text = currentStep.description,
+                            text = targetStep.description,
                             color = SovereignInk,
                             fontSize = 13.sp,
-                            lineHeight = 18.sp,
+                            lineHeight = 20.sp,
                             textAlign = TextAlign.Center
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.weight(0.6f))
-
-            // Page Indicator Dots
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                ONBOARDING_PAGES.indices.forEach { index ->
-                    val isSelected = index == currentPage
-                    val dotWidth by animateDpAsState(
-                        targetValue = if (isSelected) 28.dp else 8.dp,
-                        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-                        label = "dot_width"
-                    )
-                    Box(
-                        modifier = Modifier
-                            .height(8.dp)
-                            .width(dotWidth)
-                            .background(
-                                if (isSelected) SovereignViolet else CoolHairline,
-                                RoundedCornerShape(9999.dp)
-                            )
-                    )
-                    if (index < ONBOARDING_PAGES.size - 1) {
-                        Spacer(modifier = Modifier.width(6.dp))
-                    }
-                }
-            }
-
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Navigation Controls
-            Row(
+            // Navigation Buttons Row
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                if (currentPage > 0) {
-                    OutlinedButton(
-                        onClick = { currentPage-- },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(48.dp)
-                            .testTag("onboarding_prev_button"),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, CoolHairline),
-                        shape = RoundedCornerShape(9999.dp)
-                    ) {
-                        Text("SEBELUMNYA", color = SovereignInk, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                    }
-                }
-
                 Button(
                     onClick = {
-                        if (currentPage < ONBOARDING_PAGES.size - 1) {
+                        if (currentPage < SETUP_FLOW_STEPS.size - 1) {
                             currentPage++
                         } else {
                             onFinish()
                         }
                     },
                     modifier = Modifier
-                        .weight(if (currentPage > 0) 1.5f else 1f)
-                        .height(48.dp)
-                        .testTag("onboarding_next_button"),
+                        .fillMaxWidth()
+                        .height(50.dp)
+                        .testTag("onboarding_primary_button"),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = SovereignInk,
                         contentColor = SignalWhite
@@ -343,22 +355,40 @@ fun OnboardingScreen(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = if (currentPage < ONBOARDING_PAGES.size - 1) "LANJUTKAN" else "MULAI & AKTIFKAN VAULT",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.5.sp
+                            text = step.buttonText,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 13.sp
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
                         Icon(
-                            imageVector = if (currentPage < ONBOARDING_PAGES.size - 1) Icons.AutoMirrored.Filled.ArrowForward else Icons.Default.Check,
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp)
                         )
                     }
                 }
+
+                if (currentPage > 0) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    OutlinedButton(
+                        onClick = { currentPage-- },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(44.dp)
+                            .testTag("onboarding_back_button"),
+                        shape = RoundedCornerShape(9999.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, CoolHairline)
+                    ) {
+                        Text(
+                            text = "Kembali ke Langkah Sebelumnya",
+                            color = CarbonGray,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(8.dp))
         }
     }
 }

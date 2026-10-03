@@ -1,11 +1,14 @@
 package com.example.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -21,24 +24,23 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Nfc
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -49,6 +51,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.domain.model.NfcScanState
 import com.example.domain.model.NfcTagData
 import com.example.ui.AuthSheetAction
 import com.example.ui.AuthSheetState
@@ -65,17 +68,16 @@ import com.example.ui.theme.SovereignViolet
 fun AuthBottomSheet(
     authSheetState: AuthSheetState,
     lockoutSeconds: Int,
+    nfcScanState: NfcScanState = NfcScanState.WAITING,
+    failureCount: Int = 0,
     lastDiscoveredTag: NfcTagData? = null,
     onDismiss: () -> Unit,
+    onResetNfcScan: () -> Unit = {},
     onRequestBiometricAuth: (rawUid: String) -> Unit
 ) {
     if (!authSheetState.isOpen) return
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var customUid by remember(lastDiscoveredTag) {
-        mutableStateOf(lastDiscoveredTag?.hexUid ?: "04:A2:3B:5F:7E:89")
-    }
-    var showCustomUidInput by remember { mutableStateOf(false) }
 
     val infiniteTransition = rememberInfiniteTransition(label = "nfc_pulse")
     val pulseScale by infiniteTransition.animateFloat(
@@ -139,31 +141,21 @@ fun AuthBottomSheet(
                 Spacer(modifier = Modifier.height(14.dp))
             }
 
-            // Eyebrow
-            Text(
-                text = "SOVEREIGN HARDWARE ANCHOR",
-                color = SovereignViolet,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium,
-                letterSpacing = 1.2.sp
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-
             // Header Title
             Text(
-                text = "Hold e-KTP to Device",
+                text = "Tempelkan Kunci Fisik e-KTP",
                 color = SovereignInk,
-                fontSize = 22.sp,
+                fontSize = 20.sp,
                 fontWeight = FontWeight.Medium
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = when (authSheetState.action) {
-                    AuthSheetAction.SETUP_VAULT -> "Inisialisasi kunci fisik e-KTP perdana"
-                    AuthSheetAction.UNLOCK_VAULT -> "Dekripsi database hardware-anchored"
+                    AuthSheetAction.SETUP_VAULT -> "Daftarkan e-KTP perdana untuk membuat brankas"
+                    AuthSheetAction.UNLOCK_VAULT -> "Verifikasi e-KTP terdaftar untuk membuka brankas"
                     AuthSheetAction.REVEAL_PASSWORD -> "Otorisasi pembacaan password sensitif"
-                    AuthSheetAction.ADD_PHYSICAL_KEY -> "Registrasi kunci NFC baru (BYOK)"
-                    AuthSheetAction.EXPORT_VAULT -> "Otorisasi ekspor backup .loker"
+                    AuthSheetAction.ADD_PHYSICAL_KEY -> "Registrasi kunci NFC fisik tambahan"
+                    AuthSheetAction.EXPORT_VAULT -> "Otorisasi enkripsi file backup .loker"
                 },
                 color = CarbonGray,
                 fontSize = 13.sp,
@@ -172,70 +164,152 @@ fun AuthBottomSheet(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // NFC Radar Graphic (NEVERHACK marble & violet accent)
-            Box(
-                modifier = Modifier
-                    .size(104.dp)
-                    .scale(pulseScale)
-                    .background(Color(0x0F6B2BEA), CircleShape)
-                    .border(1.5.dp, SovereignViolet, CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        imageVector = Icons.Default.Nfc,
-                        contentDescription = "NFC Scanner",
-                        tint = SovereignViolet,
-                        modifier = Modifier.size(32.dp)
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
+            // NFC State Visual Indicator
+            when (nfcScanState) {
+                NfcScanState.WAITING -> {
+                    Box(
+                        modifier = Modifier
+                            .size(104.dp)
+                            .scale(pulseScale)
+                            .background(Color(0x0F6B2BEA), CircleShape)
+                            .border(1.5.dp, SovereignViolet, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                imageVector = Icons.Default.Nfc,
+                                contentDescription = "Menunggu NFC",
+                                tint = SovereignViolet,
+                                modifier = Modifier.size(32.dp)
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "MENUNGGU",
+                                color = SovereignInk,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Medium,
+                                letterSpacing = 0.8.sp
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
                     Text(
-                        text = "NFC ACTIVE",
-                        color = SovereignInk,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Medium,
-                        letterSpacing = 0.8.sp
+                        text = "Tempelkan kartu e-KTP ke belakang bodi ponsel",
+                        color = CarbonGray,
+                        fontSize = 12.sp,
+                        textAlign = TextAlign.Center
                     )
                 }
-            }
 
-            Spacer(modifier = Modifier.height(18.dp))
-
-            // Biometric Readiness Box
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MistSurface, RoundedCornerShape(10.dp))
-                    .border(1.dp, CoolHairline, RoundedCornerShape(10.dp))
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Fingerprint,
-                    contentDescription = "Biometric Sensor",
-                    tint = SovereignViolet,
-                    modifier = Modifier.size(26.dp)
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
+                NfcScanState.DETECTED, NfcScanState.READING, NfcScanState.VERIFYING -> {
+                    Box(
+                        modifier = Modifier
+                            .size(104.dp)
+                            .background(Color(0x1A6B2BEA), CircleShape)
+                            .border(1.5.dp, SovereignViolet, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(32.dp),
+                                color = SovereignViolet,
+                                strokeWidth = 3.dp
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = if (nfcScanState == NfcScanState.DETECTED) "TERDETEKSI"
+                                else if (nfcScanState == NfcScanState.READING) "MEMBACA"
+                                else "MEMVERIFIKASI",
+                                color = SovereignInk,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Medium,
+                                letterSpacing = 0.8.sp
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
                     Text(
-                        text = "FINGERPRINT VERIFICATION",
-                        color = SovereignInk,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium,
-                        letterSpacing = 0.6.sp
-                    )
-                    Text(
-                        text = "● TEE Hardware Key Ready",
+                        text = "Sedang memproses chip ISO 14443-4 e-KTP...",
                         color = SovereignViolet,
-                        fontSize = 11.sp
+                        fontSize = 12.sp,
+                        textAlign = TextAlign.Center
+                    )
+                }
+
+                NfcScanState.SUCCESS -> {
+                    Box(
+                        modifier = Modifier
+                            .size(104.dp)
+                            .background(Color(0xFFE8F5E9), CircleShape)
+                            .border(2.dp, Color(0xFF2E7D32), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = "Sukses",
+                                tint = Color(0xFF2E7D32),
+                                modifier = Modifier.size(36.dp)
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "TERVERIFIKASI",
+                                color = Color(0xFF2E7D32),
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.5.sp
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = "Kartu e-KTP terverifikasi. Lanjutkan otorisasi biometrik.",
+                        color = Color(0xFF2E7D32),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        textAlign = TextAlign.Center
+                    )
+                }
+
+                NfcScanState.FAILED -> {
+                    Box(
+                        modifier = Modifier
+                            .size(104.dp)
+                            .background(Color(0xFFFDE8E8), CircleShape)
+                            .border(2.dp, AlertCrimson, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                imageVector = Icons.Default.ErrorOutline,
+                                contentDescription = "Gagal",
+                                tint = AlertCrimson,
+                                modifier = Modifier.size(36.dp)
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "GAGAL",
+                                color = AlertCrimson,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.5.sp
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = if (failureCount > 0) "Percobaan gagal: $failureCount dari 3. Tempelkan kembali kartu dengan benar."
+                        else "Pembacaan kartu gagal. Coba tempelkan kembali.",
+                        color = AlertCrimson,
+                        fontSize = 12.sp,
+                        textAlign = TextAlign.Center
                     )
                 }
             }
 
-            // Real-time Tag Telemetry if detected
+            // Real-time Tag Telemetry
             if (lastDiscoveredTag != null) {
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(14.dp))
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -245,7 +319,7 @@ fun AuthBottomSheet(
                 ) {
                     Column {
                         Text(
-                            text = "HARDWARE DISCOVERY DETECTED",
+                            text = "IDENTITAS KARTU TERDETEKSI",
                             color = SovereignViolet,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Medium,
@@ -253,7 +327,7 @@ fun AuthBottomSheet(
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = "UID: ${lastDiscoveredTag.hexUid} • Tech: ${lastDiscoveredTag.techList.joinToString(", ")}",
+                            text = "UID: ${lastDiscoveredTag.hexUid} • ${if (lastDiscoveredTag.isIsoDep) "ISO 14443-4" else "Contactless Tag"}",
                             color = SovereignInk,
                             fontSize = 11.sp,
                             fontFamily = FontFamily.Monospace
@@ -275,21 +349,21 @@ fun AuthBottomSheet(
                     Row(verticalAlignment = Alignment.Top) {
                         Icon(
                             imageVector = Icons.Default.Warning,
-                            contentDescription = "High Risk Warning",
+                            contentDescription = "Peringatan Risiko Tinggi",
                             tint = AlertCrimson,
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
                             Text(
-                                text = "CRITICAL / HIGH-RISK SINGLE-USE",
+                                text = "KEBIJAKAN HIGH-RISK / SEKALI PAKAI",
                                 color = AlertCrimson,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Medium,
                                 letterSpacing = 0.6.sp
                             )
                             Text(
-                                text = "Data dan kunci dekripsi akan seketika di-wipe dari RAM begitu modal tertutup atau 15 detik berakhir.",
+                                text = "Kunci dekripsi dan password akan segera dihapus permanen dari memori RAM setelah 15 detik.",
                                 color = SovereignInk,
                                 fontSize = 11.sp,
                                 lineHeight = 15.sp
@@ -301,12 +375,16 @@ fun AuthBottomSheet(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Primary Action Button (Sovereign Ink 9999px pill triggering BiometricPrompt)
+            // Primary Action Button (Triggers BiometricPrompt)
+            val canProceed = lockoutSeconds == 0 && lastDiscoveredTag != null && nfcScanState != NfcScanState.FAILED
+
             Button(
                 onClick = {
-                    onRequestBiometricAuth(customUid)
+                    lastDiscoveredTag?.let {
+                        onRequestBiometricAuth(it.hexUid)
+                    }
                 },
-                enabled = lockoutSeconds == 0,
+                enabled = canProceed,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp)
@@ -325,7 +403,8 @@ fun AuthBottomSheet(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "OTORISASI BIOMETRIK & BUKA",
+                        text = if (lastDiscoveredTag == null) "TEMPELKAN KARTU UNTUK MELANJUTKAN"
+                        else "OTORISASI BIOMETRIK & BUKA",
                         fontWeight = FontWeight.Medium,
                         fontSize = 13.sp,
                         letterSpacing = 0.5.sp
@@ -333,50 +412,32 @@ fun AuthBottomSheet(
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Ghost Outlined Button (NEVERHACK style)
-            OutlinedButton(
-                onClick = { showCustomUidInput = !showCustomUidInput },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(44.dp)
-                    .testTag("toggle_custom_uid_button"),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = SovereignInk
-                ),
-                border = androidx.compose.foundation.BorderStroke(1.dp, CoolHairline),
-                shape = RoundedCornerShape(9999.dp)
-            ) {
-                Text(
-                    text = if (showCustomUidInput) "SEMBUNYIKAN SIMULASI UID" else "SIMULASI UID KTP MANUAL",
-                    fontSize = 11.sp,
-                    letterSpacing = 0.6.sp
-                )
-            }
-
-            if (showCustomUidInput) {
-                Spacer(modifier = Modifier.height(12.dp))
-                OutlinedTextField(
-                    value = customUid,
-                    onValueChange = { customUid = it },
-                    label = { Text("NFC Static UID (ISO 14443-4)") },
+            // Retry Button when scan failed or card moved
+            if (nfcScanState == NfcScanState.FAILED || (lastDiscoveredTag == null && nfcScanState != NfcScanState.WAITING)) {
+                Spacer(modifier = Modifier.height(10.dp))
+                OutlinedButton(
+                    onClick = onResetNfcScan,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .testTag("custom_uid_input"),
-                    shape = RoundedCornerShape(10.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = SovereignViolet,
-                        unfocusedBorderColor = CoolHairline,
-                        focusedTextColor = SovereignInk,
-                        unfocusedTextColor = SovereignInk,
-                        focusedLabelColor = SovereignViolet
-                    ),
-                    textStyle = androidx.compose.ui.text.TextStyle(
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 13.sp
+                        .height(44.dp)
+                        .testTag("retry_nfc_button"),
+                    shape = RoundedCornerShape(9999.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, CoolHairline)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = "Coba Lagi",
+                        modifier = Modifier.size(16.dp),
+                        tint = SovereignInk
                     )
-                )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "COBA TEMPELKAN KEMBALI",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = SovereignInk
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))

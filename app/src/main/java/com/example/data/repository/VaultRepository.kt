@@ -89,12 +89,24 @@ class VaultRepository(
         val phraseHash = securityEngine.hashPhrase(recoveryPhrase)
         val uidHash = securityEngine.hashNfcUid(rawUid)
 
+        // 1. Generate true 256-bit Vault Master Key
+        val vmk = securityEngine.generateVaultMasterKey()
+
+        // 2. Wrap VMK for primary physical key
+        val cardKek = securityEngine.deriveKeyEncryptionKey(rawUid, biometricSecret, salt)
+        val wrappedMasterKey = securityEngine.wrapKey(vmk, cardKek)
+
+        // 3. Wrap VMK with Recovery Phrase
+        val recoveryKek = securityEngine.deriveRecoveryKey(recoveryPhrase, salt)
+        val recoveryWrappedKey = securityEngine.wrapKey(vmk, recoveryKek)
+
         val meta = SecurityMetaEntity(
             id = 1,
             deviceSalt = salt,
             kdfType = "PBKDF2WithHmacSHA256",
             iterations = 65536,
             recoveryPhraseHash = phraseHash,
+            recoveryWrappedKey = recoveryWrappedKey,
             vaultInitialized = true,
             lastAuditTimestamp = System.currentTimeMillis()
         )
@@ -106,69 +118,22 @@ class VaultRepository(
             techListRaw = "IsoDep,NfcA,ISO 14443-4",
             registeredAt = System.currentTimeMillis(),
             isPrimary = true,
-            cardType = "ISO 14443-4 e-KTP"
+            cardType = "ISO 14443-4 e-KTP",
+            wrappedMasterKey = wrappedMasterKey
         )
         physicalKeyDao.insertPhysicalKey(primaryKey)
 
-        val masterKey = securityEngine.deriveMasterKey(rawUid, biometricSecret, salt)
-        KeyStorage.storeMasterKey(masterKey, primaryKey.label, uidHash)
-        securityEngine.wipeBytes(masterKey)
+        // 4. Store active VMK in memory for the initial session
+        KeyStorage.storeMasterKey(vmk, primaryKey.label, uidHash, isPrimary = true)
 
-        seedInitialSampleData(KeyStorage.getMasterKey()!!)
-        logAuditEvent("VAULT_INIT", "System", "SUCCESS", "Vault initialized with primary e-KTP")
+        // 5. Securely wipe ephemeral keys
+        securityEngine.wipeBytes(vmk)
+        securityEngine.wipeBytes(cardKek)
+        securityEngine.wipeBytes(recoveryKek)
+
+        logAuditEvent("VAULT_INIT", "System", "SUCCESS", "Vault initialized with primary physical key and recovery phrase")
 
         recoveryPhrase
-    }
-
-    private suspend fun seedInitialSampleData(masterKeyBytes: ByteArray) {
-        val sample1 = CredentialEntity(
-            id = UUID.randomUUID().toString(),
-            serviceName = "Bank Central Asia (KlikBCA)",
-            username = "fufufafa_99",
-            encryptedBlob = securityEngine.encryptPassword("BcaSecure#2026!", masterKeyBytes),
-            targetType = TargetType.APP.name,
-            targetId = "com.bca",
-            securityCategory = SecurityCategory.HIGH_RISK.name,
-            lastUsedTimestamp = System.currentTimeMillis(),
-            notes = "Rekening utama & e-banking"
-        )
-        val sample2 = CredentialEntity(
-            id = UUID.randomUUID().toString(),
-            serviceName = "NEVERHACK Sovereign Console",
-            username = "sec-ops@neverhack.com",
-            encryptedBlob = securityEngine.encryptPassword("NeverHack#Sovereign99!", masterKeyBytes),
-            targetType = TargetType.WEB.name,
-            targetId = "console.neverhack.com",
-            securityCategory = SecurityCategory.HIGH_RISK.name,
-            lastUsedTimestamp = System.currentTimeMillis() - 3600000L,
-            notes = "Cybersecurity command terminal root"
-        )
-        val sample3 = CredentialEntity(
-            id = UUID.randomUUID().toString(),
-            serviceName = "GoTo Financial (Gojek/GoPay)",
-            username = "romdhoni.vault",
-            encryptedBlob = securityEngine.encryptPassword("GoPay#PIN9876", masterKeyBytes),
-            targetType = TargetType.APP.name,
-            targetId = "com.gojek.app",
-            securityCategory = SecurityCategory.HIGH_RISK.name,
-            lastUsedTimestamp = System.currentTimeMillis() - 18000000L,
-            notes = "E-wallet & transaksi digital"
-        )
-        val sample4 = CredentialEntity(
-            id = UUID.randomUUID().toString(),
-            serviceName = "GitHub Enterprise",
-            username = "ktp-engineer",
-            encryptedBlob = securityEngine.encryptPassword("ghp_SecretTokenKtpVault2026", masterKeyBytes),
-            targetType = TargetType.WEB.name,
-            targetId = "github.com",
-            securityCategory = SecurityCategory.STANDARD.name,
-            lastUsedTimestamp = System.currentTimeMillis() - 86400000L,
-            notes = "Work repositories & deploy keys"
-        )
-        credentialDao.insertCredential(sample1)
-        credentialDao.insertCredential(sample2)
-        credentialDao.insertCredential(sample3)
-        credentialDao.insertCredential(sample4)
     }
 
     override suspend fun authenticateWithCard(
@@ -186,14 +151,21 @@ class VaultRepository(
             val meta = securityMetaDao.getSecurityMeta()
                 ?: return@withContext Result.failure(IllegalStateException("Vault belum terkonfigurasi."))
 
-            val masterKey = securityEngine.deriveMasterKey(rawUid, biometricSecret, meta.deviceSalt)
-            KeyStorage.storeMasterKey(masterKey, physicalKey.label, uidHash)
-            securityEngine.wipeBytes(masterKey)
+            val cardKek = securityEngine.deriveKeyEncryptionKey(rawUid, biometricSecret, meta.deviceSalt)
+            val masterKey = if (physicalKey.wrappedMasterKey.isNotBlank()) {
+                securityEngine.unwrapKey(physicalKey.wrappedMasterKey, cardKek)
+            } else {
+                securityEngine.deriveMasterKey(rawUid, biometricSecret, meta.deviceSalt)
+            }
 
-            logAuditEvent("AUTH_ATTEMPT", physicalKey.label, "SUCCESS", "Hardware verification passed")
+            KeyStorage.storeMasterKey(masterKey, physicalKey.label, uidHash, isPrimary = physicalKey.isPrimary)
+            securityEngine.wipeBytes(masterKey)
+            securityEngine.wipeBytes(cardKek)
+
+            logAuditEvent("AUTH_ATTEMPT", physicalKey.label, "SUCCESS", "Hardware verification passed (Primary: ${physicalKey.isPrimary})")
             Result.success(physicalKey.toDomain())
         } catch (e: Exception) {
-            logAuditEvent("AUTH_ATTEMPT", "Hardware_NFC", "ERROR", e.message ?: "Unknown error")
+            logAuditEvent("AUTH_ATTEMPT", "Hardware_NFC", "ERROR", e.message ?: "Authentication error")
             Result.failure(e)
         }
     }
@@ -201,25 +173,64 @@ class VaultRepository(
     override suspend fun registerNewPhysicalKey(
         rawUid: String,
         label: String,
-        techList: List<String>
+        techList: List<String>,
+        biometricSecret: String
     ): Result<Unit> = withContext(Dispatchers.IO) {
         try {
+            val currentVmk = KeyStorage.getMasterKey()
+                ?: return@withContext Result.failure(IllegalStateException("Vault harus dalam keadaan terbuka untuk mendaftarkan kunci baru."))
+
             val uidHash = securityEngine.hashNfcUid(rawUid)
             val existing = physicalKeyDao.getPhysicalKeyByHash(uidHash)
             if (existing != null) {
                 return@withContext Result.failure(IllegalArgumentException("Kartu ini sudah terdaftar sebelumnya."))
             }
 
+            val meta = securityMetaDao.getSecurityMeta()
+                ?: return@withContext Result.failure(IllegalStateException("Metadata keamanan tidak ditemukan."))
+
+            // Wrap VMK with the new card's KEK
+            val newCardKek = securityEngine.deriveKeyEncryptionKey(rawUid, biometricSecret, meta.deviceSalt)
+            val wrapped = securityEngine.wrapKey(currentVmk, newCardKek)
+            securityEngine.wipeBytes(newCardKek)
+
             val newKey = PhysicalKeyEntity(
                 uidHash = uidHash,
-                label = label.ifBlank { "Kartu NFC Kustom" },
+                label = label.ifBlank { "Kartu NFC Tambahan" },
                 techListRaw = techList.joinToString(",").ifBlank { "IsoDep,NfcA" },
                 registeredAt = System.currentTimeMillis(),
                 isPrimary = false,
-                cardType = if (techList.contains("IsoDep")) "ISO 14443-4 Smart Card" else "NFC Contactless Tag"
+                cardType = if (techList.contains("IsoDep")) "ISO 14443-4 Smart Card" else "NFC Contactless Tag",
+                wrappedMasterKey = wrapped
             )
             physicalKeyDao.insertPhysicalKey(newKey)
             logAuditEvent("KEY_REGISTER", newKey.label, "SUCCESS", "Registered secondary hardware key")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun renamePhysicalKey(uidHash: String, newLabel: String): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val clean = newLabel.trim()
+            if (clean.isBlank()) {
+                return@withContext Result.failure(IllegalArgumentException("Label kunci tidak boleh kosong."))
+            }
+            physicalKeyDao.renameKey(uidHash, clean)
+            logAuditEvent("KEY_RENAME", clean, "SUCCESS", "Physical key renamed")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun makePhysicalKeyPrimary(uidHash: String): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val targetKey = physicalKeyDao.getPhysicalKeyByHash(uidHash)
+                ?: return@withContext Result.failure(IllegalArgumentException("Kunci tidak ditemukan."))
+            physicalKeyDao.setOnlyOnePrimary(uidHash)
+            logAuditEvent("KEY_PRIMARY", targetKey.label, "SUCCESS", "Assigned as new Primary Key")
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -233,10 +244,12 @@ class VaultRepository(
                 return@withContext Result.failure(IllegalStateException("Minimal harus menyisakan 1 kunci fisik terdaftar."))
             }
             val entity = physicalKeyDao.getPhysicalKeyByHash(uidHash)
-            if (entity != null) {
-                physicalKeyDao.deletePhysicalKey(entity)
-                logAuditEvent("KEY_REMOVE", entity.label, "SUCCESS", "Removed physical key")
+                ?: return@withContext Result.failure(IllegalArgumentException("Kunci tidak ditemukan."))
+            if (entity.isPrimary) {
+                return@withContext Result.failure(IllegalStateException("Kunci utama tidak dapat dihapus. Silakan tetapkan kunci lain sebagai utama terlebih dahulu."))
             }
+            physicalKeyDao.deletePhysicalKey(entity)
+            logAuditEvent("KEY_REMOVE", entity.label, "SUCCESS", "Removed physical key")
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -246,7 +259,8 @@ class VaultRepository(
     override suspend fun recoverVaultWithPhrase(
         phraseWords: List<String>,
         newRawUid: String,
-        biometricSecret: String
+        biometricSecret: String,
+        newLabel: String
     ): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             val meta = securityMetaDao.getSecurityMeta()
@@ -258,22 +272,35 @@ class VaultRepository(
                 return@withContext Result.failure(SecurityException("Recovery phrase 12 kata tidak valid."))
             }
 
+            val recoveryKek = securityEngine.deriveRecoveryKey(phraseWords, meta.deviceSalt)
+            val trueVmk = if (meta.recoveryWrappedKey.isNotBlank()) {
+                securityEngine.unwrapKey(meta.recoveryWrappedKey, recoveryKek)
+            } else {
+                securityEngine.deriveMasterKey(newRawUid, biometricSecret, meta.deviceSalt)
+            }
+            securityEngine.wipeBytes(recoveryKek)
+
             val uidHash = securityEngine.hashNfcUid(newRawUid)
+            val newCardKek = securityEngine.deriveKeyEncryptionKey(newRawUid, biometricSecret, meta.deviceSalt)
+            val newWrapped = securityEngine.wrapKey(trueVmk, newCardKek)
+            securityEngine.wipeBytes(newCardKek)
+
             val newPrimaryKey = PhysicalKeyEntity(
                 uidHash = uidHash,
-                label = "KTP Pengganti (Recovered)",
+                label = newLabel.ifBlank { "Primary e-KTP (Recovered)" },
                 techListRaw = "IsoDep,NfcA,ISO 14443-4",
                 registeredAt = System.currentTimeMillis(),
                 isPrimary = true,
-                cardType = "ISO 14443-4 e-KTP"
+                cardType = "ISO 14443-4 e-KTP",
+                wrappedMasterKey = newWrapped
             )
             physicalKeyDao.insertPhysicalKey(newPrimaryKey)
+            physicalKeyDao.setOnlyOnePrimary(uidHash)
 
-            val masterKey = securityEngine.deriveMasterKey(newRawUid, biometricSecret, meta.deviceSalt)
-            KeyStorage.storeMasterKey(masterKey, newPrimaryKey.label, uidHash)
-            securityEngine.wipeBytes(masterKey)
+            KeyStorage.storeMasterKey(trueVmk, newPrimaryKey.label, uidHash, isPrimary = true)
+            securityEngine.wipeBytes(trueVmk)
 
-            logAuditEvent("RECOVERY", newPrimaryKey.label, "SUCCESS", "Emergency vault recovery completed")
+            logAuditEvent("RECOVERY", newPrimaryKey.label, "SUCCESS", "Vault recovered and primary key reassigned")
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
