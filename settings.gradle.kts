@@ -22,6 +22,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "KTP-Vault"
+rootProject.name = "LOKER"
 
 include(":app")

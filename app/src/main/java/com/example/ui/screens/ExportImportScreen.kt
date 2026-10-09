@@ -106,7 +106,7 @@ fun ExportImportScreen(
                     IconButton(onClick = onBack, modifier = Modifier.testTag("export_back_button")) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Kembali",
+                            contentDescription = "Back",
                             tint = SovereignInk
                         )
                     }
@@ -281,7 +281,7 @@ fun ExportImportScreen(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "This file can only be decrypted and opened with the registered hardware e-KTP card.",
+                            text = "This file can only be decrypted and opened with the registered hardware security key card.",
                             color = SovereignInk,
                             fontSize = 12.sp,
                             lineHeight = 16.sp
@@ -441,7 +441,7 @@ fun ExportImportScreen(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
-                    text = "RECIPIENT e-KTP UID (ISO 14443-4):",
+                    text = "RECIPIENT SECURITY KEY UID (ISO 14443-4):",
                     color = CarbonGray,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Medium,

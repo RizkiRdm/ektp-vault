@@ -34,7 +34,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Lock
@@ -64,6 +63,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.CarbonGray
 import com.example.ui.theme.CoolHairline
+import com.example.ui.theme.GoldenRatio
 import com.example.ui.theme.MistSurface
 import com.example.ui.theme.SignalWhite
 import com.example.ui.theme.SovereignInk
@@ -83,71 +83,71 @@ data class OnboardingStep(
 val SETUP_FLOW_STEPS = listOf(
     OnboardingStep(
         stepNumber = 1,
-        eyebrow = "LANGKAH 1 DARI 7 • CARA KERJA",
-        title = "Brankas Mandiri Berbasis e-KTP",
-        subtitle = "Zero-Cloud & Kontrol Penuh di Tangan Anda",
-        description = "KTP-Vault mengamankan data rahasia Anda menggunakan chip kartu e-KTP sebagai kunci fisik (Physical Token). Tidak ada server eksternal, dan data hanya dapat dibuka jika Anda menempelkan kartu fisik dan lolos verifikasi biometrik.",
-        buttonText = "Lanjut: Pendaftaran Kunci",
+        eyebrow = "STEP 1 OF 7 • SYSTEM ARCHITECTURE",
+        title = "Hardware-Anchored Security",
+        subtitle = "Zero-Cloud & Absolute Physical Sovereignty",
+        description = "LOKER safeguards confidential credentials and sensitive apps by anchoring master keys directly to a physical contactless smart card. No remote cloud servers exist—data access strictly requires physical card proximity plus biometric verification.",
+        buttonText = "Continue: Hardware Key Pairing",
         icon = Icons.Default.Shield,
         accentColor = SovereignViolet
     ),
     OnboardingStep(
         stepNumber = 2,
-        eyebrow = "LANGKAH 2 DARI 7 • KUNCI FISIK",
-        title = "Daftarkan e-KTP Sebagai Kunci Utama",
-        subtitle = "Proteksi Hardware ISO 14443-4",
-        description = "Setiap e-KTP memiliki chip pintar nirsentuh dengan ID unik. Brankas membuat Vault Master Key 256-bit dan membungkusnya secara kriptografis menggunakan kunci kartu Anda, sehingga brankas tidak dapat dibuka tanpa kartu tersebut.",
-        buttonText = "Lanjut: Atur Autentikasi",
+        eyebrow = "STEP 2 OF 7 • PHYSICAL TOKEN",
+        title = "Pair Your Security Card",
+        subtitle = "ISO 14443-4 Contactless Hardware Token",
+        description = "Every contactless security card possesses a cryptographic microchip with an immutable hardware identifier. LOKER generates an isolated 256-bit AES master key and cryptographically encapsulates it using the physical chip signature.",
+        buttonText = "Continue: Biometric Gate",
         icon = Icons.Default.Nfc,
         accentColor = SovereignViolet
     ),
     OnboardingStep(
         stepNumber = 3,
-        eyebrow = "LANGKAH 3 DARI 7 • AUTENTIKASI",
-        title = "Otorisasi Biometrik / PIN Perangkat",
-        subtitle = "Android Keystore System & TEE",
-        description = "Selain kartu fisik, setiap akses brankas dan dekripsi password dilindungi sidik jari atau PIN perangkat Anda. Jika orang lain menemukan kartu Anda, mereka tetap tidak dapat membuka brankas tanpa biometrik Anda.",
-        buttonText = "Lanjut: Recovery Cadangan",
+        eyebrow = "STEP 3 OF 7 • AUTHENTICATION",
+        title = "Biometric & Hardware TEE Gate",
+        subtitle = "Android Keystore Isolated Subsystem",
+        description = "Beyond card proximity, every vault read, password decryption, and app access is gated behind biometric authorization (fingerprint/PIN). Even in the event of a misplaced physical card, unauthorized access remains mathematically impossible.",
+        buttonText = "Continue: Emergency Recovery",
         icon = Icons.Default.Fingerprint,
         accentColor = Color(0xFF10B981)
     ),
     OnboardingStep(
         stepNumber = 4,
-        eyebrow = "LANGKAH 4 DARI 7 • PEMULIHAN",
-        title = "Recovery Phrase 12 Kata Darurat",
-        subtitle = "Pemulihan Tanpa Kehilangan Data",
-        description = "Saat membuat brankas, Anda akan mendapatkan 12 kata rahasia (Recovery Phrase). Jika e-KTP Anda rusak atau hilang, Anda dapat memulihkan seluruh akun dan mendaftarkan e-KTP baru menggunakan 12 kata ini.",
-        buttonText = "Lanjut: Pengaturan Autofill",
+        eyebrow = "STEP 4 OF 7 • DISASTER RECOVERY",
+        title = "12-Word Cold Recovery Phrase",
+        subtitle = "Deterministic Zero-Loss Backup",
+        description = "During initial setup, you are issued an offline 12-word recovery phrase. If your physical card is lost or damaged, you can seamlessly restore all encrypted credentials and bind a replacement security card.",
+        buttonText = "Continue: Secure Autofill",
         icon = Icons.Default.VpnKey,
         accentColor = Color(0xFFD97706)
     ),
     OnboardingStep(
         stepNumber = 5,
-        eyebrow = "LANGKAH 5 DARI 7 • AUTOFILL",
-        title = "Pengisian Otomatis Cepat & Aman",
-        subtitle = "Integrasi Layanan Autofill Android",
-        description = "KTP-Vault dapat mengisi otomatis username dan password langsung di layar login aplikasi perbankan atau web favorit Anda, hanya setelah otorisasi kartu berhasil.",
-        buttonText = "Lanjut: Buat Kredensial",
+        eyebrow = "STEP 5 OF 7 • AUTOFILL ENGINE",
+        title = "Instant & Verified Autofill",
+        subtitle = "Single-Use Memory Scrubber",
+        description = "LOKER integrates into Android's native Autofill framework to inject usernames and passwords directly on app login screens and browser domains—only after verified physical card and biometric authorization.",
+        buttonText = "Continue: Application Locker",
         icon = Icons.Default.Key,
         accentColor = SovereignViolet
     ),
     OnboardingStep(
         stepNumber = 6,
-        eyebrow = "LANGKAH 6 DARI 7 • KREDENSIAL PERTAMA",
-        title = "Simpan Password Akun Pertama",
-        subtitle = "Pilih Aplikasi Langsung dari HP",
-        description = "Tidak perlu mengetik nama package aplikasi secara manual. Anda dapat memilih aplikasi perbankan atau sosial media langsung dari daftar aplikasi terpasang di perangkat Anda.",
-        buttonText = "Lanjut: Ringkasan Pengaturan",
+        eyebrow = "STEP 6 OF 7 • APPLICATION LOCKER",
+        title = "Lock Selected Applications",
+        subtitle = "Hardware Interception Protection",
+        description = "Protect high-risk apps (banking, messaging, galleries) on your device. Selected apps will be locked and intercepted until you tap your physical security card and pass biometric authorization.",
+        buttonText = "Continue: Readiness Overview",
         icon = Icons.Default.Apps,
         accentColor = SovereignInk
     ),
     OnboardingStep(
         stepNumber = 7,
-        eyebrow = "LANGKAH 7 DARI 7 • SELESAI",
-        title = "Brankas Anda Siap Digunakan",
-        subtitle = "Semua Perlindungan Beroperasi Penuh",
-        description = "Seluruh konsep keamanan kini telah siap. Silakan klik tombol di bawah untuk menempelkan e-KTP Anda dan memulai inisialisasi brankas pertama kali.",
-        buttonText = "Mulai Inisialisasi Brankas",
+        eyebrow = "STEP 7 OF 7 • ACTIVATION",
+        title = "Your Vault is Ready",
+        subtitle = "Hardware Cryptographic Defense Active",
+        description = "All cryptographic layers are prepared. Tap the button below to present your physical security card and initialize your personal LOKER vault.",
+        buttonText = "Initialize LOKER Vault",
         icon = Icons.Default.Check,
         accentColor = Color(0xFF10B981)
     )
@@ -179,7 +179,7 @@ fun OnboardingScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 24.dp, vertical = 16.dp)
+                .padding(horizontal = GoldenRatio.SpaceLarge, vertical = GoldenRatio.SpaceBase)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
@@ -191,10 +191,10 @@ fun OnboardingScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "PANDUAN PENYIAPAN",
+                    text = "LOKER ONBOARDING",
                     color = SovereignViolet,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold,
+                    fontSize = GoldenRatio.TextMicro,
+                    fontWeight = FontWeight.Bold,
                     letterSpacing = 1.2.sp
                 )
 
@@ -206,28 +206,28 @@ fun OnboardingScreen(
                     modifier = Modifier.testTag("skip_onboarding_button")
                 ) {
                     Text(
-                        text = "Lewati",
-                        fontSize = 11.sp,
+                        text = "Skip",
+                        fontSize = GoldenRatio.TextMicro,
                         fontWeight = FontWeight.Medium
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(GoldenRatio.SpaceBase))
 
             // Step Progress Indicator (Dots 1 to 7)
             Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(GoldenRatio.SpaceMicro),
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(vertical = 8.dp)
+                modifier = Modifier.padding(vertical = GoldenRatio.SpaceSmall)
             ) {
                 SETUP_FLOW_STEPS.forEachIndexed { index, _ ->
                     val isSelected = index == currentPage
                     val isCompleted = index < currentPage
                     Box(
                         modifier = Modifier
-                            .height(8.dp)
-                            .width(if (isSelected) 24.dp else 8.dp)
+                            .height(GoldenRatio.SpaceSmall)
+                            .width(if (isSelected) GoldenRatio.SpaceLarge else GoldenRatio.SpaceSmall)
                             .background(
                                 color = if (isSelected) SovereignViolet else if (isCompleted) Color(0xFF10B981) else CoolHairline,
                                 shape = RoundedCornerShape(9999.dp)
@@ -237,7 +237,7 @@ fun OnboardingScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(GoldenRatio.SpaceBase))
 
             // Animated Content Section
             AnimatedContent(
@@ -253,84 +253,87 @@ fun OnboardingScreen(
                         )
                     }
                 },
-                label = "step_animation"
+                label = "onboarding_step_anim"
             ) { targetStep ->
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    // Hero Icon Box
+                    // Eyebrow
+                    Text(
+                        text = targetStep.eyebrow,
+                        color = SovereignViolet,
+                        fontSize = GoldenRatio.TextMicro,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.5.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(GoldenRatio.SpaceLarge))
+
+                    // Center Animated Icon Emblem
                     Box(
                         modifier = Modifier
-                            .size(100.dp)
-                            .scale(pulseScale)
-                            .background(Color(0xFFF0EBFD), CircleShape)
-                            .border(2.dp, targetStep.accentColor, CircleShape),
+                            .size(108.dp)
+                            .scale(if (targetStep.stepNumber == 2) pulseScale else 1f)
+                            .background(SignalWhite, CircleShape)
+                            .border(1.5.dp, targetStep.accentColor, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = targetStep.icon,
                             contentDescription = targetStep.title,
                             tint = targetStep.accentColor,
-                            modifier = Modifier.size(44.dp)
+                            modifier = Modifier.size(52.dp)
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(GoldenRatio.SpaceLarge))
 
-                    Text(
-                        text = targetStep.eyebrow,
-                        color = SovereignViolet,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        letterSpacing = 1.sp
-                    )
-
-                    Spacer(modifier = Modifier.height(6.dp))
-
+                    // Title
                     Text(
                         text = targetStep.title,
                         color = SovereignInk,
-                        fontSize = 22.sp,
+                        fontSize = GoldenRatio.TextLarge,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center,
-                        lineHeight = 28.sp
+                        lineHeight = 32.sp
                     )
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(GoldenRatio.SpaceMicro))
 
+                    // Subtitle
                     Text(
                         text = targetStep.subtitle,
-                        color = CarbonGray,
-                        fontSize = 13.sp,
+                        color = SovereignViolet,
+                        fontSize = GoldenRatio.TextSmall,
                         fontWeight = FontWeight.Medium,
                         textAlign = TextAlign.Center
                     )
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(GoldenRatio.SpaceBase))
 
                     // Description Card
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(SignalWhite, RoundedCornerShape(14.dp))
-                            .border(1.dp, CoolHairline, RoundedCornerShape(14.dp))
-                            .padding(18.dp)
+                            .background(SignalWhite, RoundedCornerShape(12.dp))
+                            .border(1.dp, CoolHairline, RoundedCornerShape(12.dp))
+                            .padding(GoldenRatio.SpaceBase)
                     ) {
                         Text(
                             text = targetStep.description,
-                            color = SovereignInk,
-                            fontSize = 13.sp,
-                            lineHeight = 20.sp,
-                            textAlign = TextAlign.Center
+                            color = CarbonGray,
+                            fontSize = GoldenRatio.TextSmall,
+                            textAlign = TextAlign.Center,
+                            lineHeight = 20.sp
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(GoldenRatio.SpaceLarge))
 
-            // Navigation Buttons Row
+            // Action Buttons
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -345,8 +348,8 @@ fun OnboardingScreen(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(50.dp)
-                        .testTag("onboarding_primary_button"),
+                        .height(48.dp)
+                        .testTag("onboarding_next_button"),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = SovereignInk,
                         contentColor = SignalWhite
@@ -357,9 +360,9 @@ fun OnboardingScreen(
                         Text(
                             text = step.buttonText,
                             fontWeight = FontWeight.Medium,
-                            fontSize = 13.sp
+                            fontSize = GoldenRatio.TextSmall
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(GoldenRatio.SpaceSmall))
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                             contentDescription = null,
@@ -369,7 +372,7 @@ fun OnboardingScreen(
                 }
 
                 if (currentPage > 0) {
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(GoldenRatio.SpaceSmall))
                     OutlinedButton(
                         onClick = { currentPage-- },
                         modifier = Modifier
@@ -380,15 +383,15 @@ fun OnboardingScreen(
                         border = androidx.compose.foundation.BorderStroke(1.dp, CoolHairline)
                     ) {
                         Text(
-                            text = "Kembali ke Langkah Sebelumnya",
+                            text = "Back to Previous Step",
                             color = CarbonGray,
-                            fontSize = 12.sp
+                            fontSize = GoldenRatio.TextSmall
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(GoldenRatio.SpaceSmall))
         }
     }
 }

@@ -1,6 +1,8 @@
 package com.example.service
 
+import android.app.PendingIntent
 import android.app.assist.AssistStructure
+import android.content.Intent
 import android.os.Build
 import android.os.CancellationSignal
 import android.service.autofill.AutofillService
@@ -15,10 +17,10 @@ import android.service.autofill.SaveRequest
 import android.view.autofill.AutofillId
 import android.view.autofill.AutofillValue
 import android.widget.RemoteViews
-import com.example.R
 import com.example.data.VaultDatabase
 import com.example.security.CryptoManager
 import com.example.security.KeyStorage
+import com.example.ui.screens.autofill.AutofillAuthActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -53,7 +55,6 @@ class KtpAutofillService : AutofillService() {
         try {
             packageManager.getPackageInfo(packageName, 0)
         } catch (_: Exception) {
-            // Unverified or spoofed package
             callback.onSuccess(null)
             return
         }
@@ -61,66 +62,96 @@ class KtpAutofillService : AutofillService() {
         serviceScope.launch {
             try {
                 val db = VaultDatabase.getDatabase(applicationContext)
-                val credentials = db.credentialDao().getCredentialsForTarget(packageName)
-
-                if (credentials.isEmpty()) {
-                    callback.onSuccess(null)
-                    return@launch
-                }
 
                 val usernameFields = mutableListOf<AutofillId>()
                 val passwordFields = mutableListOf<AutofillId>()
-                traverseStructure(structure, usernameFields, passwordFields)
+                val detectedWebDomains = mutableListOf<String>()
+
+                traverseStructure(structure, usernameFields, passwordFields, detectedWebDomains)
 
                 if (usernameFields.isEmpty() && passwordFields.isEmpty()) {
                     callback.onSuccess(null)
                     return@launch
                 }
 
-                val masterKey = KeyStorage.getMasterKey()
+                val primaryWebDomain = detectedWebDomains.firstOrNull { it.isNotBlank() } ?: ""
 
-                // Security requirement: Credentials are ONLY provided after authentication
-                if (masterKey == null) {
-                    // Vault is locked: Do not provide credentials without hardware authentication
+                // Match credentials by package name or web domain
+                val credsByPackage = db.credentialDao().getCredentialsForTarget(packageName)
+                val credsByDomain = if (primaryWebDomain.isNotBlank()) {
+                    db.credentialDao().getCredentialsForTarget(primaryWebDomain)
+                } else emptyList()
+
+                val credentials = (credsByPackage + credsByDomain).distinctBy { it.id }
+
+                if (credentials.isEmpty()) {
                     callback.onSuccess(null)
                     return@launch
                 }
 
+                val usernameId = usernameFields.firstOrNull()
+                val passwordId = passwordFields.firstOrNull()
+                val masterKey = KeyStorage.getMasterKey()
+
                 val responseBuilder = FillResponse.Builder()
 
-                for (cred in credentials) {
-                    // Strictly validate target application matches credential targetId
-                    if (!cred.targetId.equals(packageName, ignoreCase = true)) {
-                        continue
+                if (masterKey == null) {
+                    // Vault is locked: Provide interactive modal authentication intent via AutofillAuthActivity
+                    val authIntent = Intent(applicationContext, AutofillAuthActivity::class.java).apply {
+                        putExtra(AutofillAuthActivity.EXTRA_TARGET_PACKAGE, packageName)
+                        putExtra(AutofillAuthActivity.EXTRA_TARGET_DOMAIN, primaryWebDomain)
+                        if (usernameId != null) putExtra(AutofillAuthActivity.EXTRA_USERNAME_ID, usernameId)
+                        if (passwordId != null) putExtra(AutofillAuthActivity.EXTRA_PASSWORD_ID, passwordId)
                     }
 
-                    val usernameId = usernameFields.firstOrNull()
-                    val passwordId = passwordFields.firstOrNull()
+                    val flags = PendingIntent.FLAG_CANCEL_CURRENT or
+                            (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0)
+                    val pendingIntent = PendingIntent.getActivity(
+                        applicationContext,
+                        1001,
+                        authIntent,
+                        flags
+                    )
 
-                    val presentation = RemoteViews(applicationContext.packageName, android.R.layout.simple_list_item_2).apply {
-                        setTextViewText(android.R.id.text1, cred.serviceName)
-                        setTextViewText(android.R.id.text2, "KTP-Vault: ${cred.username}")
+                    val authPresentation = RemoteViews(applicationContext.packageName, android.R.layout.simple_list_item_2).apply {
+                        setTextViewText(android.R.id.text1, "LOKER: Fill Credentials (${credentials.size} Accounts)")
+                        setTextViewText(android.R.id.text2, "Tap to authenticate Hardware Key & Biometrics")
                     }
 
-                    val datasetBuilder = Dataset.Builder(presentation)
-
-                    if (usernameId != null) {
-                        datasetBuilder.setValue(usernameId, AutofillValue.forText(cred.username))
-                    }
-
-                    if (passwordId != null) {
-                        try {
-                            val decrypted = CryptoManager.decryptPassword(cred.encryptedBlob, masterKey)
-                            datasetBuilder.setValue(passwordId, AutofillValue.forText(decrypted))
-                            if (cred.securityCategory == "HIGH_RISK") {
-                                KeyStorage.wipeImmediateHighRisk()
-                            }
-                        } catch (_: Exception) {
-                            // Skip password on decryption failure
+                    val targetFieldIds = (usernameFields + passwordFields).toTypedArray()
+                    responseBuilder.setAuthentication(
+                        targetFieldIds,
+                        pendingIntent.intentSender,
+                        authPresentation
+                    )
+                } else {
+                    // Master key is unlocked in session: Provide datasets
+                    for (cred in credentials) {
+                        val presentation = RemoteViews(applicationContext.packageName, android.R.layout.simple_list_item_2).apply {
+                            setTextViewText(android.R.id.text1, cred.serviceName)
+                            setTextViewText(android.R.id.text2, "LOKER: ${cred.username}")
                         }
-                    }
 
-                    responseBuilder.addDataset(datasetBuilder.build())
+                        val datasetBuilder = Dataset.Builder(presentation)
+
+                        if (usernameId != null) {
+                            datasetBuilder.setValue(usernameId, AutofillValue.forText(cred.username))
+                        }
+
+                        if (passwordId != null) {
+                            try {
+                                val decrypted = CryptoManager.decryptPassword(cred.encryptedBlob, masterKey)
+                                datasetBuilder.setValue(passwordId, AutofillValue.forText(decrypted))
+                                if (cred.securityCategory == "HIGH_RISK") {
+                                    KeyStorage.wipeImmediateHighRisk()
+                                }
+                            } catch (_: Exception) {
+                                // Skip on decryption failure
+                            }
+                        }
+
+                        responseBuilder.addDataset(datasetBuilder.build())
+                    }
                 }
 
                 val saveFields = (usernameFields + passwordFields).toTypedArray()
@@ -140,28 +171,34 @@ class KtpAutofillService : AutofillService() {
     }
 
     override fun onSaveRequest(request: SaveRequest, callback: SaveCallback) {
-        // Handled automatically via In-App additions or user confirmations
         callback.onSuccess()
     }
 
     private fun traverseStructure(
         structure: AssistStructure,
         usernameFields: MutableList<AutofillId>,
-        passwordFields: MutableList<AutofillId>
+        passwordFields: MutableList<AutofillId>,
+        webDomains: MutableList<String>
     ) {
         val windowNodesCount = structure.windowNodeCount
         for (i in 0 until windowNodesCount) {
             val windowNode = structure.getWindowNodeAt(i)
-            traverseViewNode(windowNode.rootViewNode, usernameFields, passwordFields)
+            traverseViewNode(windowNode.rootViewNode, usernameFields, passwordFields, webDomains)
         }
     }
 
     private fun traverseViewNode(
         viewNode: AssistStructure.ViewNode?,
         usernameFields: MutableList<AutofillId>,
-        passwordFields: MutableList<AutofillId>
+        passwordFields: MutableList<AutofillId>,
+        webDomains: MutableList<String>
     ) {
         if (viewNode == null) return
+
+        val webDomain = viewNode.webDomain
+        if (!webDomain.isNullOrBlank()) {
+            webDomains.add(webDomain)
+        }
 
         val hints = viewNode.autofillHints
         val id = viewNode.autofillId
@@ -189,7 +226,7 @@ class KtpAutofillService : AutofillService() {
         }
 
         for (i in 0 until viewNode.childCount) {
-            traverseViewNode(viewNode.getChildAt(i), usernameFields, passwordFields)
+            traverseViewNode(viewNode.getChildAt(i), usernameFields, passwordFields, webDomains)
         }
     }
 }

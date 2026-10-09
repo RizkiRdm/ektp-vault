@@ -1,3 +1,4 @@
 <resources>
-    <string name="app_name">KTP-Vault</string>
+    <string name="app_name">LOKER</string>
+    <string name="app_lock_accessibility_desc">Secures and locks user-selected applications using LOKER hardware key card and biometric verification.</string>
 </resources>

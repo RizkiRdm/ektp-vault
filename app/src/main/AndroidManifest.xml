@@ -5,6 +5,8 @@
     <uses-permission android:name="android.permission.NFC" />
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />
     <uses-feature android:name="android.hardware.nfc" android:required="false" />
 
     <!-- Allow querying installed launcher applications for visual app picker -->
@@ -59,6 +61,34 @@
                 android:name="android.autofill"
                 android:resource="@xml/autofill_service_config" />
         </service>
+
+        <!-- App Lock Accessibility Service -->
+        <service
+            android:name=".service.KtpAppLockAccessibilityService"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/app_lock_accessibility_service" />
+        </service>
+
+        <!-- App Lock Screen Activity -->
+        <activity
+            android:name=".ui.screens.applock.AppLockActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.MyApplication" />
+
+        <!-- Autofill Authentication Modal Activity -->
+        <activity
+            android:name=".ui.screens.autofill.AutofillAuthActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:theme="@style/Theme.MyApplication" />
     </application>
 
 </manifest>

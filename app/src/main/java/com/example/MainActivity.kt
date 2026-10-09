@@ -26,7 +26,9 @@ import com.example.ui.VaultViewModel
 import com.example.ui.components.AuthBottomSheet
 import com.example.ui.screens.AccountDetailScreen
 import com.example.ui.screens.AddEditCredentialScreen
+import com.example.ui.screens.AppLockManagerScreen
 import com.example.ui.screens.AuditLogsScreen
+import com.example.ui.screens.AutofillManagerScreen
 import com.example.ui.screens.DashboardScreen
 import com.example.ui.screens.ExportImportScreen
 import com.example.ui.screens.InitialSetupScreen
@@ -132,38 +134,38 @@ class MainActivity : FragmentActivity() {
         if (parsedTag != null && globalViewModel != null) {
             globalViewModel?.logAuditEvent(
                 eventType = "NFC_DETECTED",
-                targetService = "e-KTP Reader",
+                targetService = "Hardware Card Reader",
                 status = "SUCCESS",
                 details = "Contactless tag discovered: UID ${parsedTag.hexUid}"
             )
             BiometricHelper.promptBiometric(
                 activity = this,
-                title = "e-KTP Terdeteksi",
-                subtitle = "Verifikasi biometrik untuk membuka vault dengan kartu ${parsedTag.hexUid}",
+                title = "Security Card Detected",
+                subtitle = "Verify biometrics to unlock LOKER vault with card ${parsedTag.hexUid}",
                 onSuccess = { secret ->
                     globalViewModel?.logAuditEvent(
                         eventType = "BIOMETRIC_AUTH",
-                        targetService = "e-KTP Unlock",
+                        targetService = "Hardware Key Unlock",
                         status = "SUCCESS",
-                        details = "Biometric prompt passed for e-KTP ${parsedTag.hexUid}"
+                        details = "Biometric prompt passed for Security Card ${parsedTag.hexUid}"
                     )
                     globalViewModel?.performNfcAndBiometricAuth(parsedTag.hexUid, secret)
                 },
                 onError = { errorCode, errString ->
                     globalViewModel?.logAuditEvent(
                         eventType = if (errorCode == 7 || errorCode == 9) "BIOMETRIC_LOCKOUT" else "BIOMETRIC_ERROR",
-                        targetService = "e-KTP Unlock",
+                        targetService = "Hardware Key Unlock",
                         status = "FAILED",
                         details = "Biometric prompt error (Code $errorCode): $errString"
                     )
-                    globalViewModel?.handleBiometricFailure("Otorisasi biometrik kartu gagal: $errString")
+                    globalViewModel?.handleBiometricFailure("Biometric authorization failed: $errString")
                 },
                 onFailed = {
                     globalViewModel?.logAuditEvent(
                         eventType = "BIOMETRIC_MISMATCH",
-                        targetService = "e-KTP Unlock",
+                        targetService = "Hardware Key Unlock",
                         status = "FAILED",
-                        details = "Biometric prompt sensor rejected input."
+                        details = "Biometric sensor rejected input."
                     )
                 }
             )
@@ -180,6 +182,7 @@ fun VaultApp(
     val credentials by viewModel.credentials.collectAsStateWithLifecycle()
     val physicalKeys by viewModel.physicalKeys.collectAsStateWithLifecycle()
     val auditLogs by viewModel.auditLogs.collectAsStateWithLifecycle()
+    val lockedApps by viewModel.lockedApps.collectAsStateWithLifecycle()
 
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) {
@@ -346,6 +349,36 @@ fun VaultApp(
                         onBack = { viewModel.navigateTo(ScreenState.Dashboard) }
                     )
                 }
+
+                is ScreenState.AppLockManager -> {
+                    BackHandler {
+                        viewModel.navigateTo(ScreenState.Dashboard)
+                    }
+                    AppLockManagerScreen(
+                        lockedApps = lockedApps,
+                        onBack = { viewModel.navigateTo(ScreenState.Dashboard) },
+                        onLockNewApp = { pkg, name -> viewModel.lockApp(pkg, name) },
+                        onToggleLockStatus = { pkg, enabled -> viewModel.toggleAppLock(pkg, enabled) },
+                        onRemoveLockedApp = { pkg -> viewModel.unlockAppPermanently(pkg) }
+                    )
+                }
+
+                is ScreenState.AutofillManager -> {
+                    BackHandler {
+                        viewModel.navigateTo(ScreenState.Dashboard)
+                    }
+                    AutofillManagerScreen(
+                        credentials = credentials,
+                        onBack = { viewModel.navigateTo(ScreenState.Dashboard) },
+                        onRequestAuthAndReveal = { credId ->
+                            viewModel.openAuthSheet(
+                                AuthSheetAction.REVEAL_PASSWORD,
+                                credId,
+                                false
+                            )
+                        }
+                    )
+                }
             }
 
             // Auth Bottom Sheet requiring BiometricPrompt before vault decryption
@@ -359,13 +392,13 @@ fun VaultApp(
                 onResetNfcScan = { viewModel.resetNfcScan() },
                 onRequestBiometricAuth = { rawUid ->
                     val title = when (uiState.authSheet.action) {
-                        AuthSheetAction.SETUP_VAULT -> "Inisialisasi Keamanan Biometrik"
-                        AuthSheetAction.UNLOCK_VAULT -> "Buka KTP-Vault"
-                        AuthSheetAction.REVEAL_PASSWORD -> "Dekripsi Password Sensitif"
-                        AuthSheetAction.ADD_PHYSICAL_KEY -> "Otorisasi Kunci Fisik Baru"
-                        AuthSheetAction.EXPORT_VAULT -> "Otorisasi Ekspor Vault"
+                        AuthSheetAction.SETUP_VAULT -> "Initialize Biometric Security"
+                        AuthSheetAction.UNLOCK_VAULT -> "Unlock LOKER Vault"
+                        AuthSheetAction.REVEAL_PASSWORD -> "Decrypt Sensitive Password"
+                        AuthSheetAction.ADD_PHYSICAL_KEY -> "Authorize New Security Key"
+                        AuthSheetAction.EXPORT_VAULT -> "Authorize Vault Export"
                     }
-                    val subtitle = "Verifikasi sidik jari atau PIN perangkat untuk mengakses vault"
+                    val subtitle = "Verify biometric fingerprint or device PIN to proceed"
                     onLaunchSystemBiometric(
                         title,
                         subtitle,

@@ -58,6 +58,7 @@ import com.example.ui.AuthSheetState
 import com.example.ui.theme.AlertCrimson
 import com.example.ui.theme.CarbonGray
 import com.example.ui.theme.CoolHairline
+import com.example.ui.theme.GoldenRatio
 import com.example.ui.theme.MistSurface
 import com.example.ui.theme.SignalWhite
 import com.example.ui.theme.SovereignInk
@@ -132,37 +133,37 @@ fun AuthBottomSheet(
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = "Cooldown: $lockoutSeconds detik tersisa",
+                            text = "Cooldown: $lockoutSeconds seconds remaining",
                             color = SovereignInk,
-                            fontSize = 13.sp
+                            fontSize = GoldenRatio.TextSmall
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(GoldenRatio.SpaceBase))
             }
 
             // Header Title
             Text(
-                text = "Tempelkan Kunci Fisik e-KTP",
+                text = "Tap Physical Security Key",
                 color = SovereignInk,
-                fontSize = 20.sp,
+                fontSize = GoldenRatio.TextMedium,
                 fontWeight = FontWeight.Medium
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = when (authSheetState.action) {
-                    AuthSheetAction.SETUP_VAULT -> "Daftarkan e-KTP perdana untuk membuat brankas"
-                    AuthSheetAction.UNLOCK_VAULT -> "Verifikasi e-KTP terdaftar untuk membuka brankas"
-                    AuthSheetAction.REVEAL_PASSWORD -> "Otorisasi pembacaan password sensitif"
-                    AuthSheetAction.ADD_PHYSICAL_KEY -> "Registrasi kunci NFC fisik tambahan"
-                    AuthSheetAction.EXPORT_VAULT -> "Otorisasi enkripsi file backup .loker"
+                    AuthSheetAction.SETUP_VAULT -> "Register primary security card to initialize vault"
+                    AuthSheetAction.UNLOCK_VAULT -> "Verify registered security card to unlock vault"
+                    AuthSheetAction.REVEAL_PASSWORD -> "Authorize sensitive credential decryption"
+                    AuthSheetAction.ADD_PHYSICAL_KEY -> "Register supplementary hardware key card"
+                    AuthSheetAction.EXPORT_VAULT -> "Authorize encrypted backup export"
                 },
                 color = CarbonGray,
-                fontSize = 13.sp,
+                fontSize = GoldenRatio.TextSmall,
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(GoldenRatio.SpaceLarge))
 
             // NFC State Visual Indicator
             when (nfcScanState) {
@@ -178,25 +179,25 @@ fun AuthBottomSheet(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(
                                 imageVector = Icons.Default.Nfc,
-                                contentDescription = "Menunggu NFC",
+                                contentDescription = "Waiting for Security Key",
                                 tint = SovereignViolet,
                                 modifier = Modifier.size(32.dp)
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "MENUNGGU",
+                                text = "AWAITING",
                                 color = SovereignInk,
-                                fontSize = 10.sp,
+                                fontSize = GoldenRatio.TextMicro,
                                 fontWeight = FontWeight.Medium,
                                 letterSpacing = 0.8.sp
                             )
                         }
                     }
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(GoldenRatio.SpaceSmall))
                     Text(
-                        text = "Tempelkan kartu e-KTP ke belakang bodi ponsel",
+                        text = "Hold physical security card against the back of your phone",
                         color = CarbonGray,
-                        fontSize = 12.sp,
+                        fontSize = GoldenRatio.TextSmall,
                         textAlign = TextAlign.Center
                     )
                 }
@@ -217,21 +218,21 @@ fun AuthBottomSheet(
                             )
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
-                                text = if (nfcScanState == NfcScanState.DETECTED) "TERDETEKSI"
-                                else if (nfcScanState == NfcScanState.READING) "MEMBACA"
-                                else "MEMVERIFIKASI",
+                                text = if (nfcScanState == NfcScanState.DETECTED) "DETECTED"
+                                else if (nfcScanState == NfcScanState.READING) "READING"
+                                else "VERIFYING",
                                 color = SovereignInk,
-                                fontSize = 10.sp,
+                                fontSize = GoldenRatio.TextMicro,
                                 fontWeight = FontWeight.Medium,
                                 letterSpacing = 0.8.sp
                             )
                         }
                     }
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(GoldenRatio.SpaceSmall))
                     Text(
-                        text = "Sedang memproses chip ISO 14443-4 e-KTP...",
+                        text = "Authenticating ISO 14443-4 hardware key token...",
                         color = SovereignViolet,
-                        fontSize = 12.sp,
+                        fontSize = GoldenRatio.TextSmall,
                         textAlign = TextAlign.Center
                     )
                 }
@@ -247,25 +248,25 @@ fun AuthBottomSheet(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(
                                 imageVector = Icons.Default.CheckCircle,
-                                contentDescription = "Sukses",
+                                contentDescription = "Success",
                                 tint = Color(0xFF2E7D32),
                                 modifier = Modifier.size(36.dp)
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "TERVERIFIKASI",
+                                text = "VERIFIED",
                                 color = Color(0xFF2E7D32),
-                                fontSize = 9.sp,
+                                fontSize = GoldenRatio.TextMicro,
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = 0.5.sp
                             )
                         }
                     }
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(GoldenRatio.SpaceSmall))
                     Text(
-                        text = "Kartu e-KTP terverifikasi. Lanjutkan otorisasi biometrik.",
+                        text = "Security card verified. Proceed to biometric authorization.",
                         color = Color(0xFF2E7D32),
-                        fontSize = 12.sp,
+                        fontSize = GoldenRatio.TextSmall,
                         fontWeight = FontWeight.Medium,
                         textAlign = TextAlign.Center
                     )
@@ -282,26 +283,26 @@ fun AuthBottomSheet(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(
                                 imageVector = Icons.Default.ErrorOutline,
-                                contentDescription = "Gagal",
+                                contentDescription = "Failed",
                                 tint = AlertCrimson,
                                 modifier = Modifier.size(36.dp)
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "GAGAL",
+                                text = "FAILED",
                                 color = AlertCrimson,
-                                fontSize = 10.sp,
+                                fontSize = GoldenRatio.TextMicro,
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = 0.5.sp
                             )
                         }
                     }
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(GoldenRatio.SpaceSmall))
                     Text(
-                        text = if (failureCount > 0) "Percobaan gagal: $failureCount dari 3. Tempelkan kembali kartu dengan benar."
-                        else "Pembacaan kartu gagal. Coba tempelkan kembali.",
+                        text = if (failureCount > 0) "Attempts failed: $failureCount of 3. Please hold card firmly."
+                        else "Card reading failed. Please tap again.",
                         color = AlertCrimson,
-                        fontSize = 12.sp,
+                        fontSize = GoldenRatio.TextSmall,
                         textAlign = TextAlign.Center
                     )
                 }
@@ -309,19 +310,19 @@ fun AuthBottomSheet(
 
             // Real-time Tag Telemetry
             if (lastDiscoveredTag != null) {
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(GoldenRatio.SpaceBase))
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(MistSurface, RoundedCornerShape(10.dp))
                         .border(1.dp, CoolHairline, RoundedCornerShape(10.dp))
-                        .padding(12.dp)
+                        .padding(GoldenRatio.SpaceSmall)
                 ) {
                     Column {
                         Text(
-                            text = "IDENTITAS KARTU TERDETEKSI",
+                            text = "DETECTED HARDWARE KEY IDENTITY",
                             color = SovereignViolet,
-                            fontSize = 10.sp,
+                            fontSize = GoldenRatio.TextMicro,
                             fontWeight = FontWeight.Medium,
                             letterSpacing = 0.8.sp
                         )
@@ -329,7 +330,7 @@ fun AuthBottomSheet(
                         Text(
                             text = "UID: ${lastDiscoveredTag.hexUid} • ${if (lastDiscoveredTag.isIsoDep) "ISO 14443-4" else "Contactless Tag"}",
                             color = SovereignInk,
-                            fontSize = 11.sp,
+                            fontSize = GoldenRatio.TextMicro,
                             fontFamily = FontFamily.Monospace
                         )
                     }
@@ -338,34 +339,34 @@ fun AuthBottomSheet(
 
             // High-Risk Single-Use Warning
             if (authSheetState.isHighRiskAction) {
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(GoldenRatio.SpaceBase))
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(Color(0xFFFDE8E8), RoundedCornerShape(10.dp))
                         .border(1.dp, AlertCrimson, RoundedCornerShape(10.dp))
-                        .padding(12.dp)
+                        .padding(GoldenRatio.SpaceSmall)
                 ) {
                     Row(verticalAlignment = Alignment.Top) {
                         Icon(
                             imageVector = Icons.Default.Warning,
-                            contentDescription = "Peringatan Risiko Tinggi",
+                            contentDescription = "High-Risk Alert",
                             tint = AlertCrimson,
                             modifier = Modifier.size(18.dp)
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(GoldenRatio.SpaceSmall))
                         Column {
                             Text(
-                                text = "KEBIJAKAN HIGH-RISK / SEKALI PAKAI",
+                                text = "HIGH-RISK / EPHEMERAL POLICY",
                                 color = AlertCrimson,
-                                fontSize = 11.sp,
+                                fontSize = GoldenRatio.TextMicro,
                                 fontWeight = FontWeight.Medium,
                                 letterSpacing = 0.6.sp
                             )
                             Text(
-                                text = "Kunci dekripsi dan password akan segera dihapus permanen dari memori RAM setelah 15 detik.",
+                                text = "Decryption keys and plaintext passwords will be wiped permanently from memory after 15 seconds.",
                                 color = SovereignInk,
-                                fontSize = 11.sp,
+                                fontSize = GoldenRatio.TextMicro,
                                 lineHeight = 15.sp
                             )
                         }
@@ -373,7 +374,7 @@ fun AuthBottomSheet(
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(GoldenRatio.SpaceLarge))
 
             // Primary Action Button (Triggers BiometricPrompt)
             val canProceed = lockoutSeconds == 0 && lastDiscoveredTag != null && nfcScanState != NfcScanState.FAILED
@@ -401,12 +402,12 @@ fun AuthBottomSheet(
                         contentDescription = null,
                         modifier = Modifier.size(18.dp)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(GoldenRatio.SpaceSmall))
                     Text(
-                        text = if (lastDiscoveredTag == null) "TEMPELKAN KARTU UNTUK MELANJUTKAN"
-                        else "OTORISASI BIOMETRIK & BUKA",
+                        text = if (lastDiscoveredTag == null) "TAP SECURITY KEY TO CONTINUE"
+                        else "AUTHORIZE BIOMETRIC & UNLOCK",
                         fontWeight = FontWeight.Medium,
-                        fontSize = 13.sp,
+                        fontSize = GoldenRatio.TextSmall,
                         letterSpacing = 0.5.sp
                     )
                 }
@@ -426,14 +427,14 @@ fun AuthBottomSheet(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Refresh,
-                        contentDescription = "Coba Lagi",
+                        contentDescription = "Retry",
                         modifier = Modifier.size(16.dp),
                         tint = SovereignInk
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "COBA TEMPELKAN KEMBALI",
-                        fontSize = 11.sp,
+                        text = "RETRY CARD SCAN",
+                        fontSize = GoldenRatio.TextMicro,
                         fontWeight = FontWeight.Medium,
                         color = SovereignInk
                     )

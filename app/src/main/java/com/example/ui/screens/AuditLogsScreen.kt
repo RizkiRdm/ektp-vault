@@ -117,7 +117,7 @@ fun AuditLogsScreen(
                     IconButton(onClick = onBack, modifier = Modifier.testTag("audit_back_button")) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Kembali",
+                            contentDescription = "Back",
                             tint = SovereignInk
                         )
                     }

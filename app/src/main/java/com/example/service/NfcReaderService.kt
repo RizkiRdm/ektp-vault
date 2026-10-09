@@ -21,7 +21,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-// NFC reader service implementing ReaderCallback for e-KTP contactless smart card detection
+// NFC reader service implementing ReaderCallback for ISO 14443-4 contactless smart card detection
 class NfcReaderService(
     private val context: Context
 ) : INfcReaderService, NfcAdapter.ReaderCallback {

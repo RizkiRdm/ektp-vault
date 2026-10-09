@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -21,7 +22,6 @@ import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Nfc
-import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -32,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -39,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.CarbonGray
 import com.example.ui.theme.CoolHairline
+import com.example.ui.theme.GoldenRatio
 import com.example.ui.theme.MistSurface
 import com.example.ui.theme.SignalWhite
 import com.example.ui.theme.SovereignInk
@@ -55,85 +57,91 @@ fun InitialSetupScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(24.dp)
+                .padding(horizontal = GoldenRatio.SpaceLarge, vertical = GoldenRatio.SpaceBase)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // NEVERHACK N emblem
-            Box(
-                modifier = Modifier
-                    .size(72.dp)
-                    .background(SovereignInk, RoundedCornerShape(18.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "N",
-                    color = SignalWhite,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 38.sp
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = "SOVEREIGN CYBERSECURITY",
-                color = SovereignViolet,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium,
-                letterSpacing = 1.6.sp
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = "KTP-Vault",
-                color = SovereignInk,
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Medium,
-                letterSpacing = (-0.5).sp
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = "Physical-locked sovereign credential manager anchored to ISO 14443-4 e-KTP NFC chip & Android Keystore TEE.",
-                color = CarbonGray,
-                fontSize = 14.sp,
-                textAlign = TextAlign.Center,
-                lineHeight = 20.sp
-            )
-
-            Spacer(modifier = Modifier.height(28.dp))
-
-            // NEVERHACK Capability Cards
             Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                SetupPillarCard(
-                    icon = Icons.Default.CreditCard,
-                    title = "PHYSICAL PRESENCE FIRST",
-                    description = "Master cryptographic keys are bound to the hardware chip of your Indonesian e-KTP. Remote exfiltration is mathematically prevented."
+                Spacer(modifier = Modifier.height(GoldenRatio.SpaceLarge))
+
+                // Emblem
+                Box(
+                    modifier = Modifier
+                        .size(88.dp)
+                        .background(SignalWhite, CircleShape)
+                        .border(1.5.dp, SovereignViolet, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Shield,
+                        contentDescription = "LOKER Shield",
+                        tint = SovereignViolet,
+                        modifier = Modifier.size(44.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(GoldenRatio.SpaceBase))
+
+                Text(
+                    text = "SOVEREIGN DATA SECURITY",
+                    color = SovereignViolet,
+                    fontSize = GoldenRatio.TextMicro,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.6.sp
                 )
-                SetupPillarCard(
-                    icon = Icons.Default.Lock,
-                    title = "ZERO-VISIBILITY LOCAL ENCRYPTION",
-                    description = "AES-256-GCM zero-trust local database with 65,536-iteration PBKDF2 device salt. No credentials ever transit outside this device."
+
+                Spacer(modifier = Modifier.height(GoldenRatio.SpaceMicro))
+
+                Text(
+                    text = "LOKER",
+                    color = SovereignInk,
+                    fontSize = GoldenRatio.TextDisplay,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = (-0.5).sp
                 )
-                SetupPillarCard(
-                    icon = Icons.Default.Fingerprint,
-                    title = "PLAN A SINGLE-USE PROTECTION",
-                    description = "Critical financial and enterprise accounts trigger an immediate, irreversible RAM wipe upon single use or 15-second reveal expiration."
+
+                Spacer(modifier = Modifier.height(GoldenRatio.SpaceSmall))
+
+                Text(
+                    text = "Hardware-anchored sovereign credential vault and application security manager anchored to ISO 14443-4 contactless smart cards & Android Keystore TEE.",
+                    color = CarbonGray,
+                    fontSize = GoldenRatio.TextSmall,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 20.sp
                 )
+
+                Spacer(modifier = Modifier.height(GoldenRatio.SpaceLarge))
+
+                // Pillar Cards
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(GoldenRatio.SpaceBase)
+                ) {
+                    SetupPillarCard(
+                        icon = Icons.Default.CreditCard,
+                        title = "PHYSICAL PRESENCE FIRST",
+                        description = "Master cryptographic keys are bound to the microchip of your contactless security card. Remote extraction is mathematically impossible."
+                    )
+                    SetupPillarCard(
+                        icon = Icons.Default.Lock,
+                        title = "ZERO-VISIBILITY LOCAL ENCRYPTION",
+                        description = "AES-256-GCM zero-trust local database with 65,536-iteration PBKDF2 device salt. No credentials ever leave your physical device."
+                    )
+                    SetupPillarCard(
+                        icon = Icons.Default.Fingerprint,
+                        title = "SINGLE-USE REVEAL PROTECTION",
+                        description = "Critical financial and personal credentials trigger an immediate, irreversible RAM wipe upon single use or 15-second reveal expiration."
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(GoldenRatio.SpaceLarge))
 
-            // Primary CTA Button (Sovereign Ink 9999px pill)
+            // Primary CTA Button
             Button(
                 onClick = onStartSetup,
                 modifier = Modifier
@@ -148,63 +156,68 @@ fun InitialSetupScreen(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(imageVector = Icons.Default.Nfc, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(GoldenRatio.SpaceSmall))
                     Text(
-                        text = "INITIALIZE VAULT WITH E-KTP",
+                        text = "INITIALIZE VAULT WITH SECURITY CARD",
                         fontWeight = FontWeight.Medium,
-                        fontSize = 13.sp,
+                        fontSize = GoldenRatio.TextSmall,
                         letterSpacing = 0.5.sp
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(GoldenRatio.SpaceBase))
         }
     }
 }
 
 @Composable
 private fun SetupPillarCard(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     title: String,
     description: String
 ) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(SignalWhite, RoundedCornerShape(14.dp))
-            .border(1.dp, CoolHairline, RoundedCornerShape(14.dp))
-            .padding(16.dp)
+            .background(SignalWhite, RoundedCornerShape(12.dp))
+            .border(1.dp, CoolHairline, RoundedCornerShape(12.dp))
+            .padding(GoldenRatio.SpaceBase)
     ) {
-        Row(verticalAlignment = Alignment.Top) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Top
+        ) {
             Box(
                 modifier = Modifier
                     .size(36.dp)
-                    .background(Color(0xFFF0EBFD), RoundedCornerShape(8.dp)),
+                    .background(Color(0xFFEDE9FE), RoundedCornerShape(8.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
                     tint = SovereignViolet,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(20.dp)
                 )
             }
-            Spacer(modifier = Modifier.width(12.dp))
-            Column {
+
+            Spacer(modifier = Modifier.width(GoldenRatio.SpaceBase))
+
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
                     color = SovereignInk,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
+                    fontSize = GoldenRatio.TextSmall,
+                    fontWeight = FontWeight.Bold,
                     letterSpacing = 0.5.sp
                 )
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(GoldenRatio.SpaceMicro))
                 Text(
                     text = description,
                     color = CarbonGray,
-                    fontSize = 12.sp,
-                    lineHeight = 16.sp
+                    fontSize = GoldenRatio.TextSmall,
+                    lineHeight = 18.sp
                 )
             }
         }

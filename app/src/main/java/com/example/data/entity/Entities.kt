@@ -33,7 +33,7 @@ data class PhysicalKeyEntity(
     val techListRaw: String = "IsoDep,NfcA",
     val registeredAt: Long,
     val isPrimary: Boolean = false,
-    val cardType: String = "ISO 14443-4 e-KTP",
+    val cardType: String = "ISO 14443-4 Smart Card",
     val wrappedMasterKey: String = ""
 )
 
@@ -65,4 +65,15 @@ data class AuditLogEntity(
     val targetService: String,
     val status: String,
     val details: String
+)
+
+@Entity(tableName = "locked_apps")
+data class LockedAppEntity(
+    @PrimaryKey
+    val packageName: String,
+    val appName: String,
+    val lockedAt: Long = System.currentTimeMillis(),
+    val isEnabled: Boolean = true,
+    val unlockDurationMinutes: Int = 0,
+    val lastUnlockedTimestamp: Long = 0L
 )

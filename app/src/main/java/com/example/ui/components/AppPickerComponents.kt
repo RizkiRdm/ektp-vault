@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.example.ui.theme.CarbonGray
 import com.example.ui.theme.CoolHairline
+import com.example.ui.theme.GoldenRatio
 import com.example.ui.theme.MistSurface
 import com.example.ui.theme.SignalWhite
 import com.example.ui.theme.SovereignInk
@@ -192,24 +193,24 @@ fun AppPickerBottomSheet(
             ) {
                 Column {
                     Text(
-                        text = "PILIH APLIKASI TARGET",
+                        text = "SELECT TARGET APPLICATION",
                         color = SovereignInk,
-                        fontSize = 17.sp,
+                        fontSize = GoldenRatio.TextBase,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 0.5.sp
                     )
                     Text(
-                        text = "Pilih aplikasi yang ingin dilindungi dengan Autofill e-KTP",
+                        text = "Select application to secure with your hardware key card",
                         color = CarbonGray,
-                        fontSize = 12.sp
+                        fontSize = GoldenRatio.TextSmall
                     )
                 }
                 IconButton(onClick = onDismiss) {
-                    Icon(imageVector = Icons.Default.Close, contentDescription = "Tutup", tint = CarbonGray)
+                    Icon(imageVector = Icons.Default.Close, contentDescription = "Close", tint = CarbonGray)
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(GoldenRatio.SpaceBase))
 
             // Search bar
             OutlinedTextField(
@@ -218,7 +219,7 @@ fun AppPickerBottomSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("app_search_input"),
-                placeholder = { Text("Cari nama aplikasi atau package...") },
+                placeholder = { Text("Search application name or package...") },
                 leadingIcon = {
                     Icon(imageVector = Icons.Default.Search, contentDescription = null, tint = CarbonGray)
                 },

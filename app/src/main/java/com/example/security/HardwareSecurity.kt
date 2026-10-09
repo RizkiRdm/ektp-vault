@@ -36,8 +36,8 @@ object NfcHelper {
 // Helper managing BiometricPrompt authentication to protect access to credential vault and decryption
 object BiometricHelper {
 
-    private const val PREFS_NAME = "ktp_vault_secure_meta"
-    private const val PREF_BIOMETRIC_SECRET = "ktp_vault_bio_entropy"
+    private const val PREFS_NAME = "loker_secure_meta"
+    private const val PREF_BIOMETRIC_SECRET = "loker_bio_entropy"
 
     // Check if device supports Biometric or Device Credential (PIN/Pattern/Password)
     fun canAuthenticate(context: Context): Boolean {
@@ -67,8 +67,8 @@ object BiometricHelper {
     // Launch official BiometricPrompt to protect access before decrypting vault items
     fun promptBiometric(
         activity: FragmentActivity,
-        title: String = "KTP-Vault Otorisasi Biometrik",
-        subtitle: String = "Verifikasi identitas biometrik untuk mengakses vault",
+        title: String = "LOKER Biometric Authorization",
+        subtitle: String = "Verify biometric identity to access vault",
         onSuccess: (secret: String) -> Unit,
         onError: (errorCode: Int, errString: String) -> Unit,
         onFailed: (() -> Unit)? = null
@@ -109,7 +109,7 @@ object BiometricHelper {
             promptInfoBuilder.setAllowedAuthenticators(authenticators)
         } else {
             promptInfoBuilder.setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
-            promptInfoBuilder.setNegativeButtonText("Batal")
+            promptInfoBuilder.setNegativeButtonText("Cancel")
         }
 
         try {
@@ -118,7 +118,7 @@ object BiometricHelper {
             // Security: Never treat an exception as authentication success
             onError(
                 BiometricPrompt.ERROR_UNABLE_TO_PROCESS,
-                e.localizedMessage ?: "Gagal memproses autentikasi biometrik pada perangkat."
+                e.localizedMessage ?: "Unable to process biometric authentication on device."
             )
         }
     }

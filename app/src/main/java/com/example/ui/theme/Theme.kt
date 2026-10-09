@@ -5,29 +5,29 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-private val NeverhackLightColorScheme = lightColorScheme(
-    primary = SovereignInk,
-    onPrimary = SignalWhite,
-    primaryContainer = SovereignInk,
-    onPrimaryContainer = SignalWhite,
-    secondary = SovereignViolet,
-    onSecondary = SignalWhite,
-    secondaryContainer = Color(0xFFF0EBFD),
-    onSecondaryContainer = SovereignViolet,
-    tertiary = CyberCyan,
-    onTertiary = SovereignInk,
+private val BrutalistEditorialLightColorScheme = lightColorScheme(
+    primary = CarbonBlack,
+    onPrimary = PaperWhite,
+    primaryContainer = CarbonBlack,
+    onPrimaryContainer = PaperWhite,
+    secondary = MintChip,
+    onSecondary = CarbonBlack,
+    secondaryContainer = MistGray,
+    onSecondaryContainer = CarbonBlack,
+    tertiary = VoltageYellow,
+    onTertiary = CarbonBlack,
     error = AlertCrimson,
-    onError = SignalWhite,
+    onError = PaperWhite,
     errorContainer = Color(0xFFFDE8E8),
     onErrorContainer = AlertCrimson,
-    background = MistSurface,
-    onBackground = SovereignInk,
-    surface = SignalWhite,
-    onSurface = SovereignInk,
-    surfaceVariant = MistSurface,
-    onSurfaceVariant = CarbonGray,
-    outline = CoolHairline,
-    outlineVariant = ShadowLichen
+    background = WarmCanvas,
+    onBackground = CarbonBlack,
+    surface = PaperWhite,
+    onSurface = CarbonBlack,
+    surfaceVariant = MistGray,
+    onSurfaceVariant = Slate,
+    outline = Ash,
+    outlineVariant = Smoke
 )
 
 @Composable
@@ -35,7 +35,7 @@ fun MyApplicationTheme(
     content: @Composable () -> Unit
 ) {
     MaterialTheme(
-        colorScheme = NeverhackLightColorScheme,
+        colorScheme = BrutalistEditorialLightColorScheme,
         typography = Typography,
         content = content
     )

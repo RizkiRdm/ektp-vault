@@ -92,7 +92,7 @@ fun RecoveryPhraseScreen(
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Kembali",
+                            contentDescription = "Back",
                             tint = SovereignInk
                         )
                     }
@@ -136,7 +136,7 @@ fun RecoveryPhraseScreen(
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "Record these 12 words offline. In the event of total hardware loss of your primary e-KTP, this phrase is the only cryptographic key to recover your database.",
+                                text = "Record these 12 words offline. In the event of total hardware loss of your primary security key card, this phrase is the only cryptographic key to recover your database.",
                                 color = SovereignInk,
                                 fontSize = 12.sp,
                                 lineHeight = 16.sp

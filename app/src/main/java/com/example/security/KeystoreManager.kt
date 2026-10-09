@@ -1,10 +1,12 @@
 package com.example.security
 
+import android.content.Context
 import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyInfo
 import android.security.keystore.KeyProperties
 import android.util.Base64
+import java.io.File
 import java.security.KeyStore
 import java.security.SecureRandom
 import javax.crypto.Cipher
@@ -14,7 +16,7 @@ import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
-// Wrapper ensuring Master Key material never leaves the hardware-backed security module
+// Wrapper ensuring hardware isolated key representation in JVM/Test environments
 class HardwareIsolatedSecretKey(
     private val rawBytes: ByteArray
 ) : SecretKey {
@@ -25,13 +27,14 @@ class HardwareIsolatedSecretKey(
     internal val internalKey: SecretKey get() = SecretKeySpec(rawBytes, "AES")
 }
 
-// Android Keystore System manager storing the Master Key in hardware module (TEE/StrongBox)
+// Android Keystore System manager storing root encryption keys in TEE / StrongBox hardware
 object KeystoreManager {
     private const val ANDROID_KEYSTORE = "AndroidKeyStore"
-    const val MASTER_KEY_ALIAS = "ktp_vault_master_key"
+    const val MASTER_KEY_ALIAS = "cardvault_keystore_master"
     private const val AES_GCM_ALGORITHM = "AES/GCM/NoPadding"
     private const val GCM_TAG_LENGTH = 128
     private const val GCM_IV_LENGTH = 12
+    private const val ENTROPY_FILENAME = "keystore_entropy.enc"
 
     private val secureRandom = SecureRandom()
     private var simulatedHardwareKey: HardwareIsolatedSecretKey? = null
@@ -53,7 +56,7 @@ object KeystoreManager {
         }
     }
 
-    // Generate or retrieve Master Key inside the Android Keystore hardware security module
+    // Generate or retrieve Master Key inside the Android Keystore hardware module
     @Synchronized
     fun getOrCreateMasterKey(): SecretKey {
         val ks = getAndroidKeyStore()
@@ -109,7 +112,7 @@ object KeystoreManager {
         return fallback
     }
 
-    // Encrypt sensitive credential using Android Keystore Master Key in hardware module
+    // Encrypt sensitive payload using Android Keystore hardware key
     fun encrypt(plaintext: String): String {
         val masterKey = getOrCreateMasterKey()
         val actualKey = if (masterKey is HardwareIsolatedSecretKey) masterKey.internalKey else masterKey
@@ -137,7 +140,7 @@ object KeystoreManager {
         }
     }
 
-    // Decrypt credential using Android Keystore Master Key inside hardware module
+    // Decrypt credential using Android Keystore hardware key
     fun decrypt(encryptedBlobBase64: String): String {
         val combined = Base64.decode(encryptedBlobBase64, Base64.NO_WRAP)
         if (combined.size < GCM_IV_LENGTH) {
@@ -160,6 +163,31 @@ object KeystoreManager {
 
         val decryptedBytes = cipher.doFinal(cipherBytes)
         return String(decryptedBytes, Charsets.UTF_8)
+    }
+
+    // Hardware-anchored biometric entropy: Protected at rest using Keystore AES-GCM
+    @Synchronized
+    fun getOrGenerateBiometricEntropy(context: Context): String {
+        val entropyFile = File(context.filesDir, ENTROPY_FILENAME)
+        if (entropyFile.exists()) {
+            return try {
+                val encryptedBlob = entropyFile.readText(Charsets.UTF_8).trim()
+                decrypt(encryptedBlob)
+            } catch (_: Exception) {
+                // Regenerate if corrupted or tampered
+                generateAndSaveEntropy(entropyFile)
+            }
+        }
+        return generateAndSaveEntropy(entropyFile)
+    }
+
+    private fun generateAndSaveEntropy(entropyFile: File): String {
+        val rawEntropy = ByteArray(32)
+        secureRandom.nextBytes(rawEntropy)
+        val plainEntropyBase64 = Base64.encodeToString(rawEntropy, Base64.NO_WRAP)
+        val encryptedBlob = encrypt(plainEntropyBase64)
+        entropyFile.writeText(encryptedBlob, Charsets.UTF_8)
+        return plainEntropyBase64
     }
 
     // Verify key material never leaves the hardware security module (encoded is null)

@@ -55,6 +55,7 @@ import com.example.domain.model.PhysicalKey
 import com.example.ui.theme.AlertCrimson
 import com.example.ui.theme.CarbonGray
 import com.example.ui.theme.CoolHairline
+import com.example.ui.theme.GoldenRatio
 import com.example.ui.theme.MistSurface
 import com.example.ui.theme.SignalWhite
 import com.example.ui.theme.SovereignInk
@@ -75,7 +76,7 @@ fun PhysicalKeyManagerScreen(
     onRemoveKey: (uidHash: String) -> Unit
 ) {
     var showAddDialog by remember { mutableStateOf(false) }
-    var newKeyLabel by remember { mutableStateOf("Kunci NFC Cadangan") }
+    var newKeyLabel by remember { mutableStateOf("Backup Hardware Key") }
 
     var editingKey by remember { mutableStateOf<PhysicalKey?>(null) }
     var editKeyLabel by remember { mutableStateOf("") }
@@ -89,26 +90,26 @@ fun PhysicalKeyManagerScreen(
             onDismissRequest = { showAddDialog = false },
             title = {
                 Text(
-                    text = "DAFTARKAN KUNCI FISIK BARU",
+                    text = "REGISTER NEW PHYSICAL KEY",
                     color = SovereignInk,
                     fontWeight = FontWeight.Medium,
-                    fontSize = 15.sp,
+                    fontSize = GoldenRatio.TextBase,
                     letterSpacing = 0.5.sp
                 )
             },
             text = {
                 Column {
                     Text(
-                        text = "Tambahkan kartu pintar nirsentuh ISO 14443-4 (seperti e-KTP cadangan atau smart card NFC) sebagai kunci pembuka brankas tambahan.",
+                        text = "Add an ISO 14443-4 contactless smart card or NFC security token as a supplementary unlocking key.",
                         color = CarbonGray,
-                        fontSize = 12.sp,
+                        fontSize = GoldenRatio.TextSmall,
                         lineHeight = 16.sp
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(GoldenRatio.SpaceBase))
                     OutlinedTextField(
                         value = newKeyLabel,
                         onValueChange = { newKeyLabel = it },
-                        label = { Text("Label Kunci") },
+                        label = { Text("Key Label") },
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -139,10 +140,10 @@ fun PhysicalKeyManagerScreen(
                     modifier = Modifier.testTag("confirm_register_key_button")
                 ) {
                     Text(
-                        "LANJUT KE TEMPEL KTP",
+                        "PROCEED TO CARD SCAN",
                         color = SignalWhite,
                         fontWeight = FontWeight.Medium,
-                        fontSize = 12.sp,
+                        fontSize = GoldenRatio.TextSmall,
                         letterSpacing = 0.5.sp
                     )
                 }
@@ -153,7 +154,7 @@ fun PhysicalKeyManagerScreen(
                     shape = RoundedCornerShape(9999.dp),
                     border = androidx.compose.foundation.BorderStroke(1.dp, CoolHairline)
                 ) {
-                    Text("BATAL", color = SovereignInk)
+                    Text("CANCEL", color = SovereignInk)
                 }
             },
             containerColor = SignalWhite,
@@ -168,25 +169,25 @@ fun PhysicalKeyManagerScreen(
             onDismissRequest = { editingKey = null },
             title = {
                 Text(
-                    text = "GANTI NAMA KUNCI",
+                    text = "RENAME SECURITY KEY",
                     color = SovereignInk,
                     fontWeight = FontWeight.Medium,
-                    fontSize = 15.sp,
+                    fontSize = GoldenRatio.TextBase,
                     letterSpacing = 0.5.sp
                 )
             },
             text = {
                 Column {
                     Text(
-                        text = "Beri label yang mudah dikenali untuk kartu fisik ini.",
+                        text = "Set an identifiable label for this physical security card.",
                         color = CarbonGray,
-                        fontSize = 12.sp
+                        fontSize = GoldenRatio.TextSmall
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(GoldenRatio.SpaceBase))
                     OutlinedTextField(
                         value = editKeyLabel,
                         onValueChange = { editKeyLabel = it },
-                        label = { Text("Nama Baru") },
+                        label = { Text("New Label") },
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -216,7 +217,7 @@ fun PhysicalKeyManagerScreen(
                     shape = RoundedCornerShape(9999.dp),
                     modifier = Modifier.testTag("save_rename_key_button")
                 ) {
-                    Text("SIMPAN", color = SignalWhite, fontWeight = FontWeight.Medium)
+                    Text("SAVE", color = SignalWhite, fontWeight = FontWeight.Medium)
                 }
             },
             dismissButton = {
@@ -225,7 +226,7 @@ fun PhysicalKeyManagerScreen(
                     shape = RoundedCornerShape(9999.dp),
                     border = androidx.compose.foundation.BorderStroke(1.dp, CoolHairline)
                 ) {
-                    Text("BATAL", color = SovereignInk)
+                    Text("CANCEL", color = SovereignInk)
                 }
             },
             containerColor = SignalWhite,
@@ -240,18 +241,18 @@ fun PhysicalKeyManagerScreen(
             onDismissRequest = { keyToMakePrimary = null },
             title = {
                 Text(
-                    text = "JADIKAN KUNCI UTAMA (PRIMARY)",
+                    text = "DESIGNATE PRIMARY KEY",
                     color = SovereignInk,
                     fontWeight = FontWeight.Medium,
-                    fontSize = 15.sp,
+                    fontSize = GoldenRatio.TextBase,
                     letterSpacing = 0.5.sp
                 )
             },
             text = {
                 Text(
-                    text = "Apakah Anda yakin ingin menetapkan '${targetKey.label}' sebagai Kunci Utama? Hanya boleh ada satu Kunci Utama dalam brankas.",
+                    text = "Are you sure you want to designate '${targetKey.label}' as the Primary Key? There can only be one Primary Key for the vault.",
                     color = CarbonGray,
-                    fontSize = 13.sp,
+                    fontSize = GoldenRatio.TextSmall,
                     lineHeight = 18.sp
                 )
             },
@@ -265,7 +266,7 @@ fun PhysicalKeyManagerScreen(
                     shape = RoundedCornerShape(9999.dp),
                     modifier = Modifier.testTag("confirm_make_primary_button")
                 ) {
-                    Text("JADIKAN UTAMA", color = SignalWhite, fontWeight = FontWeight.Medium)
+                    Text("SET AS PRIMARY", color = SignalWhite, fontWeight = FontWeight.Medium)
                 }
             },
             dismissButton = {
@@ -274,7 +275,7 @@ fun PhysicalKeyManagerScreen(
                     shape = RoundedCornerShape(9999.dp),
                     border = androidx.compose.foundation.BorderStroke(1.dp, CoolHairline)
                 ) {
-                    Text("BATAL", color = SovereignInk)
+                    Text("CANCEL", color = SovereignInk)
                 }
             },
             containerColor = SignalWhite,
@@ -289,18 +290,18 @@ fun PhysicalKeyManagerScreen(
             onDismissRequest = { keyToDelete = null },
             title = {
                 Text(
-                    text = "CABUT / HAPUS KUNCI FISIK",
+                    text = "REVOKE PHYSICAL KEY",
                     color = AlertCrimson,
                     fontWeight = FontWeight.Medium,
-                    fontSize = 15.sp,
+                    fontSize = GoldenRatio.TextBase,
                     letterSpacing = 0.5.sp
                 )
             },
             text = {
                 Text(
-                    text = "Kartu '${targetKey.label}' tidak akan dapat lagi digunakan untuk mendeskripsi brankas. Tindakan ini tidak dapat dibatalkan.",
+                    text = "Security key '${targetKey.label}' will no longer be capable of decrypting this vault. This action cannot be undone.",
                     color = SovereignInk,
-                    fontSize = 13.sp,
+                    fontSize = GoldenRatio.TextSmall,
                     lineHeight = 18.sp
                 )
             },
@@ -314,7 +315,7 @@ fun PhysicalKeyManagerScreen(
                     shape = RoundedCornerShape(9999.dp),
                     modifier = Modifier.testTag("confirm_delete_key_button")
                 ) {
-                    Text("HAPUS KUNCI", color = SignalWhite, fontWeight = FontWeight.Medium)
+                    Text("REVOKE KEY", color = SignalWhite, fontWeight = FontWeight.Medium)
                 }
             },
             dismissButton = {
@@ -323,7 +324,7 @@ fun PhysicalKeyManagerScreen(
                     shape = RoundedCornerShape(9999.dp),
                     border = androidx.compose.foundation.BorderStroke(1.dp, CoolHairline)
                 ) {
-                    Text("BATAL", color = SovereignInk)
+                    Text("CANCEL", color = SovereignInk)
                 }
             },
             containerColor = SignalWhite,
@@ -337,9 +338,9 @@ fun PhysicalKeyManagerScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "MANAJEMEN KUNCI FISIK",
+                        text = "PHYSICAL KEY MANAGER",
                         color = SovereignInk,
-                        fontSize = 15.sp,
+                        fontSize = GoldenRatio.TextBase,
                         fontWeight = FontWeight.Medium,
                         letterSpacing = 0.5.sp
                     )
@@ -351,7 +352,7 @@ fun PhysicalKeyManagerScreen(
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Kembali",
+                            contentDescription = "Back",
                             tint = SovereignInk
                         )
                     }
@@ -366,7 +367,7 @@ fun PhysicalKeyManagerScreen(
                     .fillMaxWidth()
                     .background(SignalWhite)
                     .border(0.5.dp, CoolHairline)
-                    .padding(16.dp)
+                    .padding(GoldenRatio.SpaceBase)
             ) {
                 Button(
                     onClick = { showAddDialog = true },
@@ -381,11 +382,11 @@ fun PhysicalKeyManagerScreen(
                     shape = RoundedCornerShape(9999.dp)
                 ) {
                     Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(GoldenRatio.SpaceSmall))
                     Text(
-                        text = "+ DAFTARKAN KUNCI BARU",
+                        text = "+ REGISTER NEW KEY",
                         fontWeight = FontWeight.Medium,
-                        fontSize = 12.sp,
+                        fontSize = GoldenRatio.TextSmall,
                         letterSpacing = 0.5.sp
                     )
                 }
@@ -396,24 +397,24 @@ fun PhysicalKeyManagerScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 20.dp, vertical = 16.dp)
+                .padding(horizontal = GoldenRatio.SpaceLarge, vertical = GoldenRatio.SpaceBase)
         ) {
             Text(
-                text = "KUNCI TERDAFTAR (${physicalKeys.size})",
+                text = "REGISTERED HARDWARE KEYS (${physicalKeys.size})",
                 color = SovereignViolet,
-                fontSize = 11.sp,
+                fontSize = GoldenRatio.TextMicro,
                 fontWeight = FontWeight.Medium,
                 letterSpacing = 1.2.sp
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Setiap kunci terdaftar memegang salinan terenkripsi dari Master Key brankas Anda.",
+                text = "Each registered card holds an encrypted instance of your vault's master credentials.",
                 color = CarbonGray,
-                fontSize = 12.sp,
+                fontSize = GoldenRatio.TextSmall,
                 lineHeight = 16.sp
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(GoldenRatio.SpaceBase))
 
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -433,7 +434,7 @@ fun PhysicalKeyManagerScreen(
                                 if (key.isPrimary) SovereignViolet else CoolHairline,
                                 RoundedCornerShape(14.dp)
                             )
-                            .padding(16.dp)
+                            .padding(GoldenRatio.SpaceBase)
                     ) {
                         Column {
                             Row(
@@ -458,25 +459,25 @@ fun PhysicalKeyManagerScreen(
                                             modifier = Modifier.size(20.dp)
                                         )
                                     }
-                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Spacer(modifier = Modifier.width(GoldenRatio.SpaceBase))
                                     Column {
                                         Text(
                                             text = key.label,
                                             color = SovereignInk,
-                                            fontSize = 14.sp,
+                                            fontSize = GoldenRatio.TextSmall,
                                             fontWeight = FontWeight.Medium
                                         )
                                         Spacer(modifier = Modifier.height(2.dp))
                                         Text(
-                                            text = "Hash UID: ${key.uidHash.take(8)}...${key.uidHash.takeLast(4)}",
+                                            text = "UID Hash: ${key.uidHash.take(8)}...${key.uidHash.takeLast(4)}",
                                             color = CarbonGray,
-                                            fontSize = 11.sp,
+                                            fontSize = GoldenRatio.TextMicro,
                                             fontFamily = FontFamily.Monospace
                                         )
                                         Text(
-                                            text = "Terdaftar: $regDate",
+                                            text = "Enrolled: $regDate",
                                             color = CarbonGray,
-                                            fontSize = 10.sp
+                                            fontSize = GoldenRatio.TextMicro
                                         )
                                     }
                                 }
@@ -493,7 +494,7 @@ fun PhysicalKeyManagerScreen(
                                             Text(
                                                 text = "PRIMARY KEY",
                                                 color = SovereignViolet,
-                                                fontSize = 9.sp,
+                                                fontSize = GoldenRatio.TextMicro,
                                                 fontWeight = FontWeight.Bold,
                                                 letterSpacing = 0.5.sp
                                             )
@@ -508,7 +509,7 @@ fun PhysicalKeyManagerScreen(
                                             Text(
                                                 text = "REGISTERED KEY",
                                                 color = CarbonGray,
-                                                fontSize = 9.sp,
+                                                fontSize = GoldenRatio.TextMicro,
                                                 fontWeight = FontWeight.Medium,
                                                 letterSpacing = 0.5.sp
                                             )
@@ -524,9 +525,9 @@ fun PhysicalKeyManagerScreen(
                                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                                         ) {
                                             Text(
-                                                text = "AKTIF SESI INI",
+                                                text = "ACTIVE SESSION",
                                                 color = Color(0xFF2E7D32),
-                                                fontSize = 8.sp,
+                                                fontSize = GoldenRatio.TextMicro,
                                                 fontWeight = FontWeight.Bold
                                             )
                                         }
@@ -534,7 +535,7 @@ fun PhysicalKeyManagerScreen(
                                 }
                             }
 
-                            Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(GoldenRatio.SpaceBase))
 
                             // Action buttons row
                             Row(
@@ -556,16 +557,16 @@ fun PhysicalKeyManagerScreen(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Edit,
-                                        contentDescription = "Ganti Nama",
+                                        contentDescription = "Rename",
                                         modifier = Modifier.size(13.dp),
                                         tint = SovereignInk
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
-                                    Text("Ganti Nama", fontSize = 11.sp, color = SovereignInk)
+                                    Text("Rename", fontSize = GoldenRatio.TextMicro, color = SovereignInk)
                                 }
 
                                 if (!key.isPrimary) {
-                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Spacer(modifier = Modifier.width(GoldenRatio.SpaceSmall))
                                     // Make Primary button
                                     Button(
                                         onClick = { keyToMakePrimary = key },
@@ -580,15 +581,15 @@ fun PhysicalKeyManagerScreen(
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.Star,
-                                            contentDescription = "Jadikan Utama",
+                                            contentDescription = "Set Primary",
                                             modifier = Modifier.size(13.dp)
                                         )
                                         Spacer(modifier = Modifier.width(4.dp))
-                                        Text("Jadikan Utama", fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                                        Text("Set Primary", fontSize = GoldenRatio.TextMicro, fontWeight = FontWeight.Medium)
                                     }
 
                                     if (physicalKeys.size > 1) {
-                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Spacer(modifier = Modifier.width(GoldenRatio.SpaceSmall))
                                         // Delete button
                                         IconButton(
                                             onClick = { keyToDelete = key },
@@ -598,7 +599,7 @@ fun PhysicalKeyManagerScreen(
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Default.Delete,
-                                                contentDescription = "Hapus Kunci",
+                                                contentDescription = "Revoke Key",
                                                 tint = AlertCrimson,
                                                 modifier = Modifier.size(18.dp)
                                             )

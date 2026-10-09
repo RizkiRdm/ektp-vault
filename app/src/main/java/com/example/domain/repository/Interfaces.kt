@@ -26,7 +26,7 @@ interface IVaultRepository {
     suspend fun removePhysicalKey(uidHash: String): Result<Unit>
     suspend fun renamePhysicalKey(uidHash: String, newLabel: String): Result<Unit>
     suspend fun makePhysicalKeyPrimary(uidHash: String): Result<Unit>
-    suspend fun recoverVaultWithPhrase(phraseWords: List<String>, newRawUid: String, biometricSecret: String, newLabel: String = "Primary e-KTP (Recovered)"): Result<Unit>
+    suspend fun recoverVaultWithPhrase(phraseWords: List<String>, newRawUid: String, biometricSecret: String, newLabel: String = "Primary Hardware Key (Recovered)"): Result<Unit>
     suspend fun addCredential(serviceName: String, username: String, passwordPlain: String, targetType: TargetType, targetId: String, securityCategory: SecurityCategory, notes: String): Result<Unit>
     suspend fun updateCredential(id: String, serviceName: String, username: String, newPasswordPlain: String?, targetType: TargetType, targetId: String, securityCategory: SecurityCategory, notes: String): Result<Unit>
     suspend fun updateSecurityCategory(id: String, category: SecurityCategory): Result<Unit>
@@ -36,6 +36,12 @@ interface IVaultRepository {
     suspend fun exportVaultToLoker(backupPassword: String): Result<String>
     suspend fun importVaultFromLoker(lokerContent: String, backupPassword: String, currentNfcUid: String): Result<Int>
     suspend fun logAuditEvent(eventType: String, targetService: String, status: String, details: String)
+    fun getAllLockedApps(): Flow<List<com.example.domain.model.LockedApp>>
+    suspend fun lockApp(packageName: String, appName: String): Result<Unit>
+    suspend fun unlockAppPermanently(packageName: String): Result<Unit>
+    suspend fun toggleAppLockStatus(packageName: String, isEnabled: Boolean): Result<Unit>
+    suspend fun isAppLocked(packageName: String): Boolean
+    suspend fun getCredentialsForTarget(targetId: String): List<Credential>
 }
 
 interface INfcReaderService {

@@ -107,3 +107,34 @@ interface AuditLogDao {
     @Insert
     suspend fun insertAuditLog(log: AuditLogEntity)
 }
+
+@Dao
+interface LockedAppDao {
+    @Query("SELECT * FROM locked_apps ORDER BY appName ASC")
+    fun getAllLockedApps(): Flow<List<com.example.data.entity.LockedAppEntity>>
+
+    @Query("SELECT * FROM locked_apps WHERE isEnabled = 1")
+    suspend fun getEnabledLockedApps(): List<com.example.data.entity.LockedAppEntity>
+
+    @Query("SELECT * FROM locked_apps WHERE packageName = :packageName LIMIT 1")
+    suspend fun getLockedApp(packageName: String): com.example.data.entity.LockedAppEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertLockedApp(app: com.example.data.entity.LockedAppEntity)
+
+    @Delete
+    suspend fun deleteLockedApp(app: com.example.data.entity.LockedAppEntity)
+
+    @Query("DELETE FROM locked_apps WHERE packageName = :packageName")
+    suspend fun deleteByPackageName(packageName: String)
+
+    @Query("UPDATE locked_apps SET isEnabled = :isEnabled WHERE packageName = :packageName")
+    suspend fun updateAppLockStatus(packageName: String, isEnabled: Boolean)
+
+    @Query("UPDATE locked_apps SET lastUnlockedTimestamp = :timestamp WHERE packageName = :packageName")
+    suspend fun updateLastUnlocked(packageName: String, timestamp: Long)
+
+    @Query("SELECT COUNT(*) FROM locked_apps WHERE isEnabled = 1")
+    suspend fun getLockedAppsCount(): Int
+}
+

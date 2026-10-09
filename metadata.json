@@ -1,6 +1,6 @@
 {
-  "name": "KTP-Vault",
-  "description": "Hardware-anchored credential manager using e-KTP NFC and biometrics with zero-trust local encryption.",
+  "name": "LOKER",
+  "description": "Hardware-anchored credential vault, application locker, and autofill engine secured with contactless smart cards and biometric cryptographic isolation.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

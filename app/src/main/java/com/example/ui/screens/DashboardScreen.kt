@@ -2,6 +2,7 @@ package com.example.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -118,7 +119,7 @@ fun DashboardScreen(
             onDismissRequest = { showHelpDialog = false },
             title = {
                 Text(
-                    text = "CARA KERJA BRANKAS KTP-VAULT",
+                    text = "LOKER SECURITY ARCHITECTURE",
                     color = SovereignInk,
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp,
@@ -128,28 +129,28 @@ fun DashboardScreen(
             text = {
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                     Text(
-                        text = "1. Kunci Fisik (Physical Key):\nBrankas terkunci menggunakan microchip e-KTP Anda. Data Master Key dienkripsi dan hanya dapat dibuka saat kartu ditempelkan ke sensor NFC ponsel.",
+                        text = "1. Physical Hardware Anchor:\nThe vault and locked applications are cryptographically bound to your contactless security card microchip. Decryption strictly requires physical card contact.",
                         color = SovereignInk,
                         fontSize = 12.sp,
                         lineHeight = 17.sp
                     )
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
-                        text = "2. Otorisasi Biometrik:\nSetiap akses membutuhkan sidik jari atau PIN perangkat Anda melalui Android Keystore. Jika kartu Anda dipegang orang lain, mereka tetap tidak dapat membukanya tanpa biometrik Anda.",
+                        text = "2. Biometric Keystore Gate:\nEvery credential access and app unlock requires verified fingerprint or PIN authorization via the Android Keystore TEE subsystem.",
                         color = SovereignInk,
                         fontSize = 12.sp,
                         lineHeight = 17.sp
                     )
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
-                        text = "3. Penyimpanan Lokal Terisolasi:\nSeluruh password dienkripsi dengan standar AES-256-GCM langsung di HP (database lokal). Tidak ada data yang dikirim ke server.",
+                        text = "3. Zero-Visibility Local Isolation:\nCredentials are encrypted with AES-256-GCM locally on this device. No remote servers exist, eliminating cloud exfiltration vectors.",
                         color = SovereignInk,
                         fontSize = 12.sp,
                         lineHeight = 17.sp
                     )
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
-                        text = "4. Pemulihan Darurat (Recovery Phrase):\nSimpan 12 kata pemulihan Anda di tempat rahasia untuk memulihkan brankas jika kartu e-KTP hilang.",
+                        text = "4. Cold Disaster Recovery:\nRetain your offline 12-word recovery phrase securely to restore access in case of a lost or damaged physical card.",
                         color = SovereignInk,
                         fontSize = 12.sp,
                         lineHeight = 17.sp
@@ -162,7 +163,7 @@ fun DashboardScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = SovereignInk),
                     shape = RoundedCornerShape(9999.dp)
                 ) {
-                    Text("TUTUP", color = SignalWhite, fontWeight = FontWeight.Medium)
+                    Text("CLOSE", color = SignalWhite, fontWeight = FontWeight.Medium)
                 }
             },
             dismissButton = {
@@ -174,7 +175,7 @@ fun DashboardScreen(
                     shape = RoundedCornerShape(9999.dp),
                     border = androidx.compose.foundation.BorderStroke(1.dp, CoolHairline)
                 ) {
-                    Text("BUKA PANDUAN PENYIAPAN", color = SovereignViolet)
+                    Text("OPEN SETUP GUIDE", color = SovereignViolet)
                 }
             },
             containerColor = SignalWhite,
@@ -196,7 +197,7 @@ fun DashboardScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "K",
+                                text = "L",
                                 color = SignalWhite,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp
@@ -205,14 +206,14 @@ fun DashboardScreen(
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
                             Text(
-                                text = "KTP-Vault",
+                                text = "LOKER",
                                 color = SovereignInk,
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
-                                letterSpacing = 0.2.sp
+                                letterSpacing = 0.5.sp
                             )
                             Text(
-                                text = "Brankas Kredensial e-KTP & Biometrik",
+                                text = "Hardware Vault & Application Locker",
                                 color = CarbonGray,
                                 fontSize = 10.sp
                             )
@@ -237,7 +238,7 @@ fun DashboardScreen(
                     ) {
                         Icon(
                             imageVector = if (uiState.isUnlocked) Icons.Default.LockOpen else Icons.Default.Lock,
-                            contentDescription = "Kunci Vault",
+                            contentDescription = "Lock Vault",
                             tint = if (uiState.isUnlocked) SovereignViolet else AlertCrimson
                         )
                     }
@@ -249,7 +250,7 @@ fun DashboardScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Settings,
-                                contentDescription = "Pengaturan",
+                                contentDescription = "Settings",
                                 tint = SovereignInk
                             )
                         }
@@ -318,7 +319,35 @@ fun DashboardScreen(
                             DropdownMenuItem(
                                 text = {
                                     Text(
-                                        "BANTUAN & CARA KERJA",
+                                        "APPLICATION LOCKER",
+                                        color = SovereignInk,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                },
+                                onClick = {
+                                    showOptionsMenu = false
+                                    onNavigate(ScreenState.AppLockManager)
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        "AUTOFILL & LOGIN HELPER",
+                                        color = SovereignInk,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                },
+                                onClick = {
+                                    showOptionsMenu = false
+                                    onNavigate(ScreenState.AutofillManager)
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        "SECURITY ARCHITECTURE HELP",
                                         color = SovereignViolet,
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold
@@ -332,7 +361,7 @@ fun DashboardScreen(
                             DropdownMenuItem(
                                 text = {
                                     Text(
-                                        "PANDUAN PENYIAPAN (ONBOARDING)",
+                                        "SYSTEM ONBOARDING GUIDE",
                                         color = SovereignInk,
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Medium
@@ -458,7 +487,7 @@ fun DashboardScreen(
                                 fontWeight = FontWeight.Medium
                             )
                             Text(
-                                text = if (uiState.isUnlocked) "Android Keystore TEE Active • Hardware Module Isolated" else "Vault Locked • Tap e-KTP to Decrypt",
+                                text = if (uiState.isUnlocked) "Android Keystore TEE Active • Hardware Module Isolated" else "Vault Locked • Tap Security Card to Decrypt",
                                 color = if (uiState.isUnlocked) SovereignViolet else AlertCrimson,
                                 fontSize = 11.sp
                             )
@@ -488,7 +517,99 @@ fun DashboardScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Quick Access Cards: Application Locker & Autofill Engine
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                // Application Locker Card
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .background(SignalWhite, RoundedCornerShape(12.dp))
+                        .border(1.dp, CoolHairline, RoundedCornerShape(12.dp))
+                        .clickable { onNavigate(ScreenState.AppLockManager) }
+                        .padding(12.dp)
+                ) {
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .background(Color(0xFFEDE9FE), RoundedCornerShape(6.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Lock,
+                                    contentDescription = null,
+                                    tint = SovereignViolet,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "APP LOCKER",
+                                color = SovereignInk,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Lock apps with security card",
+                            color = CarbonGray,
+                            fontSize = 10.sp,
+                            lineHeight = 13.sp
+                        )
+                    }
+                }
+
+                // Autofill Card
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .background(SignalWhite, RoundedCornerShape(12.dp))
+                        .border(1.dp, CoolHairline, RoundedCornerShape(12.dp))
+                        .clickable { onNavigate(ScreenState.AutofillManager) }
+                        .padding(12.dp)
+                ) {
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .background(Color(0xFFEDE9FE), RoundedCornerShape(6.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Key,
+                                    contentDescription = null,
+                                    tint = SovereignViolet,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "AUTOFILL ENGINE",
+                                color = SovereignInk,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Verified input on apps & web",
+                            color = CarbonGray,
+                            fontSize = 10.sp,
+                            lineHeight = 13.sp
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
 
             // Search input if toggled
             if (showSearchBar) {
@@ -518,7 +639,7 @@ fun DashboardScreen(
                             IconButton(onClick = { onSearchChange("") }) {
                                 Icon(
                                     imageVector = Icons.Default.Clear,
-                                    contentDescription = "Hapus",
+                                    contentDescription = "Clear",
                                     tint = CarbonGray
                                 )
                             }
@@ -814,7 +935,7 @@ fun CredentialCard(
                             DropdownMenuItem(
                                 text = {
                                     Text(
-                                        "TAP KTP TO REVEAL",
+                                        "TAP KEY TO REVEAL",
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Medium,
                                         color = SovereignViolet

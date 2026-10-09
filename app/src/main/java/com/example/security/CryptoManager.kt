@@ -208,7 +208,7 @@ object CryptoManager : ISecurityEngine {
 
         val nfcHash = envelope.getString("nfc_hash")
         if (nfcHash != currentNfcUidHash) {
-            throw SecurityException("NFC card mismatch. This file can only be opened with the registered KTP.")
+            throw SecurityException("Security key card mismatch. This file can only be opened with the registered hardware security key.")
         }
 
         val salt = Base64.decode(envelope.getString("salt"), Base64.NO_WRAP)

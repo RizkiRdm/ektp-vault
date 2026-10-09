@@ -2,17 +2,25 @@ package com.example.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val SovereignInk = Color(0xFF0A0F1F)
-val SignalWhite = Color(0xFFFFFFFF)
-val MistSurface = Color(0xFFF6F7FC)
-val CoolHairline = Color(0xFFE5E7EB)
-val ShadowLichen = Color(0xFFD8D7E2)
-val CarbonGray = Color(0xFF4E4E4E)
-val AshGray = Color(0xFF999999)
-val SovereignViolet = Color(0xFF6B2BEA)
-val VioletWash = Color(0xFFAFA9FD)
-val CyberCyan = Color(0xFF28D3FE)
-val AlertCrimson = Color(0xFFDC2626)
-val CrimsonGlow = Color(0xFFF4BABA)
-val InfoBlue = Color(0xFF2563EB)
-val PurpleShadowBase = Color(0x1A281E5D)
+// DESIGN.md Brutalist Editorial Tokens
+val CarbonBlack = Color(0xFF000000)
+val PaperWhite = Color(0xFFFFFFFF)
+val WarmCanvas = Color(0xFFE5E5E5)
+val MistGray = Color(0xFFF3F3F3)
+val Ash = Color(0xFFC6C6C6)
+val Smoke = Color(0xFF979797)
+val Slate = Color(0xFF444444)
+val Graphite = Color(0xFF2F2F2F)
+val MintChip = Color(0xFFD1FFCA)
+val VoltageYellow = Color(0xFFFFF100)
+val AlertCrimson = Color(0xFFD32F2F)
+
+// Aliases for compatibility
+val SovereignInk = CarbonBlack
+val SignalWhite = PaperWhite
+val MistSurface = WarmCanvas
+val CoolHairline = Ash
+val SovereignViolet = CarbonBlack
+val CarbonGray = Slate
+val InfoBlue = Slate
+val VioletWash = MistGray

@@ -2,14 +2,17 @@ package com.example.data.repository
 
 import com.example.data.dao.AuditLogDao
 import com.example.data.dao.CredentialDao
+import com.example.data.dao.LockedAppDao
 import com.example.data.dao.PhysicalKeyDao
 import com.example.data.dao.SecurityMetaDao
 import com.example.data.entity.AuditLogEntity
 import com.example.data.entity.CredentialEntity
+import com.example.data.entity.LockedAppEntity
 import com.example.data.entity.PhysicalKeyEntity
 import com.example.data.entity.SecurityMetaEntity
 import com.example.domain.model.AuditLog
 import com.example.domain.model.Credential
+import com.example.domain.model.LockedApp
 import com.example.domain.model.PhysicalKey
 import com.example.domain.model.SecurityCategory
 import com.example.domain.model.SecurityMeta
@@ -32,6 +35,7 @@ class VaultRepository(
     private val physicalKeyDao: PhysicalKeyDao,
     private val securityMetaDao: SecurityMetaDao,
     private val auditLogDao: AuditLogDao,
+    private val lockedAppDao: LockedAppDao,
     private val securityEngine: ISecurityEngine = CryptoManager
 ) : IVaultRepository {
 
@@ -114,11 +118,11 @@ class VaultRepository(
 
         val primaryKey = PhysicalKeyEntity(
             uidHash = uidHash,
-            label = label.ifBlank { "Primary e-KTP" },
+            label = label.ifBlank { "Primary Hardware Key" },
             techListRaw = "IsoDep,NfcA,ISO 14443-4",
             registeredAt = System.currentTimeMillis(),
             isPrimary = true,
-            cardType = "ISO 14443-4 e-KTP",
+            cardType = "Contactless Security Card",
             wrappedMasterKey = wrappedMasterKey
         )
         physicalKeyDao.insertPhysicalKey(primaryKey)
@@ -228,7 +232,7 @@ class VaultRepository(
     override suspend fun makePhysicalKeyPrimary(uidHash: String): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             val targetKey = physicalKeyDao.getPhysicalKeyByHash(uidHash)
-                ?: return@withContext Result.failure(IllegalArgumentException("Kunci tidak ditemukan."))
+                ?: return@withContext Result.failure(IllegalArgumentException("Security key not found."))
             physicalKeyDao.setOnlyOnePrimary(uidHash)
             logAuditEvent("KEY_PRIMARY", targetKey.label, "SUCCESS", "Assigned as new Primary Key")
             Result.success(Unit)
@@ -241,12 +245,12 @@ class VaultRepository(
         try {
             val count = physicalKeyDao.getPhysicalKeysCount()
             if (count <= 1) {
-                return@withContext Result.failure(IllegalStateException("Minimal harus menyisakan 1 kunci fisik terdaftar."))
+                return@withContext Result.failure(IllegalStateException("At least one registered security key must remain."))
             }
             val entity = physicalKeyDao.getPhysicalKeyByHash(uidHash)
-                ?: return@withContext Result.failure(IllegalArgumentException("Kunci tidak ditemukan."))
+                ?: return@withContext Result.failure(IllegalArgumentException("Security key not found."))
             if (entity.isPrimary) {
-                return@withContext Result.failure(IllegalStateException("Kunci utama tidak dapat dihapus. Silakan tetapkan kunci lain sebagai utama terlebih dahulu."))
+                return@withContext Result.failure(IllegalStateException("Primary key cannot be removed. Designate another key as primary first."))
             }
             physicalKeyDao.deletePhysicalKey(entity)
             logAuditEvent("KEY_REMOVE", entity.label, "SUCCESS", "Removed physical key")
@@ -287,11 +291,11 @@ class VaultRepository(
 
             val newPrimaryKey = PhysicalKeyEntity(
                 uidHash = uidHash,
-                label = newLabel.ifBlank { "Primary e-KTP (Recovered)" },
+                label = newLabel.ifBlank { "Primary Hardware Key (Recovered)" },
                 techListRaw = "IsoDep,NfcA,ISO 14443-4",
                 registeredAt = System.currentTimeMillis(),
                 isPrimary = true,
-                cardType = "ISO 14443-4 e-KTP",
+                cardType = "Contactless Security Card",
                 wrappedMasterKey = newWrapped
             )
             physicalKeyDao.insertPhysicalKey(newPrimaryKey)
@@ -318,7 +322,7 @@ class VaultRepository(
     ): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             val masterKey = KeyStorage.getMasterKey()
-                ?: return@withContext Result.failure(IllegalStateException("Sesi terkunci. Silakan tap KTP terlebih dahulu."))
+                ?: return@withContext Result.failure(IllegalStateException("Session locked. Please tap hardware key first."))
 
             val encrypted = securityEngine.encryptPassword(passwordPlain, masterKey)
             val entity = CredentialEntity(
@@ -356,7 +360,7 @@ class VaultRepository(
 
             val encryptedBlob = if (!newPasswordPlain.isNullOrBlank()) {
                 val masterKey = KeyStorage.getMasterKey()
-                    ?: return@withContext Result.failure(IllegalStateException("Sesi terkunci. Silakan tap KTP."))
+                    ?: return@withContext Result.failure(IllegalStateException("Session locked. Please tap hardware key."))
                 securityEngine.encryptPassword(newPasswordPlain, masterKey)
             } else {
                 existing.encryptedBlob
@@ -402,7 +406,7 @@ class VaultRepository(
     override suspend fun decryptPassword(encryptedBlob: String): Result<String> = withContext(Dispatchers.Default) {
         try {
             val masterKey = KeyStorage.getMasterKey()
-                ?: return@withContext Result.failure(IllegalStateException("Sesi terkunci. Diperlukan Tap KTP & Biometrik."))
+                ?: return@withContext Result.failure(IllegalStateException("Session locked. Hardware key and biometric authentication required."))
             val plaintext = securityEngine.decryptPassword(encryptedBlob, masterKey)
             logAuditEvent("DECRYPT", "Password_Field", "SUCCESS", "AES-256-GCM decryption granted")
             Result.success(plaintext)
@@ -419,7 +423,7 @@ class VaultRepository(
     override suspend fun exportVaultToLoker(backupPassword: String): Result<String> = withContext(Dispatchers.IO) {
         try {
             val activeUidHash = KeyStorage.activeUidHash.value
-                ?: return@withContext Result.failure(IllegalStateException("Vault belum terotentikasi dengan KTP."))
+                ?: return@withContext Result.failure(IllegalStateException("Vault not authenticated with hardware key."))
 
             val snapshot = credentialDao.getAllCredentials().first()
             val jsonArray = JSONArray()
@@ -505,6 +509,76 @@ class VaultRepository(
             } catch (_: Exception) {
                 // Ignore audit failure
             }
+        }
+    }
+
+    override fun getAllLockedApps(): Flow<List<LockedApp>> {
+        return lockedAppDao.getAllLockedApps().map { list ->
+            list.map {
+                LockedApp(
+                    packageName = it.packageName,
+                    appName = it.appName,
+                    lockedAt = it.lockedAt,
+                    isEnabled = it.isEnabled,
+                    unlockDurationMinutes = it.unlockDurationMinutes,
+                    lastUnlockedTimestamp = it.lastUnlockedTimestamp
+                )
+            }
+        }
+    }
+
+    override suspend fun lockApp(packageName: String, appName: String): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            lockedAppDao.insertLockedApp(
+                LockedAppEntity(
+                    packageName = packageName,
+                    appName = appName,
+                    lockedAt = System.currentTimeMillis(),
+                    isEnabled = true
+                )
+            )
+            logAuditEvent("APP_LOCKED", appName, "SUCCESS", "Application $appName ($packageName) locked with hardware security card.")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun unlockAppPermanently(packageName: String): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val app = lockedAppDao.getLockedApp(packageName)
+            val appName = app?.appName ?: packageName
+            lockedAppDao.deleteByPackageName(packageName)
+            logAuditEvent("APP_UNLOCKED_PERMANENT", appName, "SUCCESS", "Application lock for $appName permanently removed.")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun toggleAppLockStatus(packageName: String, isEnabled: Boolean): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            lockedAppDao.updateAppLockStatus(packageName, isEnabled)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun isAppLocked(packageName: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val app = lockedAppDao.getLockedApp(packageName)
+            app != null && app.isEnabled
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    override suspend fun getCredentialsForTarget(targetId: String): List<Credential> = withContext(Dispatchers.IO) {
+        try {
+            credentialDao.getCredentialsForTarget(targetId).map { it.toDomain() }
+        } catch (_: Exception) {
+            emptyList()
         }
     }
 

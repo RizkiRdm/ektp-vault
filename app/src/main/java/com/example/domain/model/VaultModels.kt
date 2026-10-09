@@ -38,7 +38,7 @@ data class PhysicalKey(
     val techList: List<String> = emptyList(),
     val registeredAt: Long,
     val isPrimary: Boolean,
-    val cardType: String = "ISO 14443-4 e-KTP"
+    val cardType: String = "ISO 14443-4 Smart Card"
 )
 
 data class SecurityMeta(
@@ -84,4 +84,13 @@ data class AuditLog(
     val targetService: String,
     val status: String,
     val details: String
+)
+
+data class LockedApp(
+    val packageName: String,
+    val appName: String,
+    val lockedAt: Long = System.currentTimeMillis(),
+    val isEnabled: Boolean = true,
+    val unlockDurationMinutes: Int = 0,
+    val lastUnlockedTimestamp: Long = 0L
 )

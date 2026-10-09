@@ -58,6 +58,7 @@ import com.example.domain.model.SecurityCategory
 import com.example.ui.theme.AlertCrimson
 import com.example.ui.theme.CarbonGray
 import com.example.ui.theme.CoolHairline
+import com.example.ui.theme.GoldenRatio
 import com.example.ui.theme.MistSurface
 import com.example.ui.theme.SignalWhite
 import com.example.ui.theme.SovereignInk
@@ -159,7 +160,7 @@ fun AccountDetailScreen(
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Kembali",
+                            contentDescription = "Back",
                             tint = SovereignInk
                         )
                     }
@@ -338,13 +339,13 @@ fun AccountDetailScreen(
 
                         Spacer(modifier = Modifier.height(14.dp))
 
-                        // NEVERHACK Primary Button
+                        // Hardware Key Reveal Button
                         Button(
                             onClick = { onTriggerReveal(isHighRisk) },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(46.dp)
-                                .testTag("tap_ktp_reveal_button"),
+                                .testTag("tap_card_reveal_button"),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = if (isHighRisk) AlertCrimson else SovereignInk,
                                 contentColor = SignalWhite
@@ -356,10 +357,10 @@ fun AccountDetailScreen(
                                 contentDescription = null,
                                 modifier = Modifier.size(16.dp)
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(GoldenRatio.SpaceSmall))
                             Text(
-                                text = "TAP KTP TO REVEAL",
-                                fontSize = 12.sp,
+                                text = "TAP SECURITY KEY TO REVEAL",
+                                fontSize = GoldenRatio.TextSmall,
                                 fontWeight = FontWeight.Medium,
                                 letterSpacing = 0.5.sp
                             )

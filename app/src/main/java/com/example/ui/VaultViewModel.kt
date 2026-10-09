@@ -31,6 +31,8 @@ sealed class ScreenState {
     data object ExportImport : ScreenState()
     data object AuditLogs : ScreenState()
     data object InitialSetup : ScreenState()
+    data object AppLockManager : ScreenState()
+    data object AutofillManager : ScreenState()
 }
 
 enum class AuthSheetAction {
@@ -45,7 +47,7 @@ data class AuthSheetState(
     val isOpen: Boolean = false,
     val action: AuthSheetAction = AuthSheetAction.UNLOCK_VAULT,
     val targetCredentialId: String? = null,
-    val pendingLabel: String = "Kartu Tambahan",
+    val pendingLabel: String = "Security Key Card",
     val isHighRiskAction: Boolean = false
 )
 
@@ -55,7 +57,7 @@ data class VaultUiState(
     val currentScreen: ScreenState = ScreenState.Onboarding,
     val searchQuery: String = "",
     val categoryFilter: SecurityCategory? = null,
-    val activeCardLabel: String = "e-KTP",
+    val activeCardLabel: String = "Security Card",
     val authSheet: AuthSheetState = AuthSheetState(),
     val revealedPassword: String? = null,
     val revealCountdown: Int = 0,
@@ -99,6 +101,9 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
     val physicalKeys: StateFlow<List<PhysicalKey>> = repository.getAllPhysicalKeys()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val lockedApps: StateFlow<List<com.example.domain.model.LockedApp>> = repository.getAllLockedApps()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     val auditLogs: StateFlow<List<AuditLog>> = container.getAuditLogsUseCase()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -113,7 +118,7 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun checkInitialization() {
         viewModelScope.launch {
-            val prefs = getApplication<Application>().getSharedPreferences("ktp_vault_prefs", android.content.Context.MODE_PRIVATE)
+            val prefs = getApplication<Application>().getSharedPreferences("loker_vault_prefs", android.content.Context.MODE_PRIVATE)
             val onboardingCompleted = prefs.getBoolean("onboarding_completed", false)
             val initialized = repository.isVaultInitialized()
 
@@ -131,7 +136,7 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun completeOnboarding() {
-        val prefs = getApplication<Application>().getSharedPreferences("ktp_vault_prefs", android.content.Context.MODE_PRIVATE)
+        val prefs = getApplication<Application>().getSharedPreferences("loker_vault_prefs", android.content.Context.MODE_PRIVATE)
         prefs.edit().putBoolean("onboarding_completed", true).apply()
         val nextScreen = if (_uiState.value.isInitialized) ScreenState.Dashboard else ScreenState.InitialSetup
         _uiState.value = _uiState.value.copy(currentScreen = nextScreen)
@@ -196,9 +201,9 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.value = _uiState.value.copy(currentScreen = screen)
     }
 
-    fun openAuthSheet(action: AuthSheetAction, targetId: String? = null, isHighRisk: Boolean = false, pendingLabel: String = "Kartu Tambahan") {
+    fun openAuthSheet(action: AuthSheetAction, targetId: String? = null, isHighRisk: Boolean = false, pendingLabel: String = "Supplementary Key") {
         if (_uiState.value.lockoutSeconds > 0) {
-            showStatus("Sistem dalam status Lockout. Tunggu ${_uiState.value.lockoutSeconds}s.")
+            showStatus("System in Lockout mode. Wait ${_uiState.value.lockoutSeconds}s.")
             return
         }
         nfcService.resetScanState()
@@ -232,7 +237,7 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             when (sheet.action) {
                 AuthSheetAction.SETUP_VAULT -> {
-                    val phrase = repository.setupInitialVault(rawUid, biometricSecret, "Primary e-KTP")
+                    val phrase = repository.setupInitialVault(rawUid, biometricSecret, "Primary Security Card")
                     _uiState.value = _uiState.value.copy(
                         isInitialized = true,
                         isUnlocked = true,
@@ -240,19 +245,19 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
                         currentScreen = ScreenState.RecoveryPhrase
                     )
                     closeAuthSheet()
-                    repository.logAuditEvent("VAULT_SETUP", "Primary e-KTP", "SUCCESS", "Initial vault configured with biometric root")
-                    showStatus("Vault berhasil diinisialisasi dengan e-KTP.")
+                    repository.logAuditEvent("VAULT_SETUP", "Primary Security Card", "SUCCESS", "Initial vault configured with biometric root")
+                    showStatus("Vault successfully initialized with hardware security card.")
                 }
                 AuthSheetAction.UNLOCK_VAULT -> {
                     val result = container.authenticateWithNfcUseCase(rawUid, biometricSecret)
                     result.onSuccess {
                         _uiState.value = _uiState.value.copy(failureCount = 0)
                         closeAuthSheet()
-                        repository.logAuditEvent("VAULT_UNLOCK", "System", "SUCCESS", "Vault unlocked with e-KTP ($rawUid) and Biometric")
-                        showStatus("Autentikasi hardware berhasil. Vault terbuka.")
+                        repository.logAuditEvent("VAULT_UNLOCK", "System", "SUCCESS", "Vault unlocked with Security Card ($rawUid) and Biometric")
+                        showStatus("Hardware authentication verified. Vault unlocked.")
                     }.onFailure { err ->
                         repository.logAuditEvent("VAULT_UNLOCK", "System", "FAILED", "Vault unlock attempt failed: ${err.message}")
-                        handleAuthFailure(err.message ?: "Autentikasi gagal")
+                        handleAuthFailure(err.message ?: "Authentication failed")
                     }
                 }
                 AuthSheetAction.REVEAL_PASSWORD -> {
@@ -266,7 +271,7 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
                         }
                     }.onFailure { err ->
                         repository.logAuditEvent("BIOMETRIC_DECRYPT", sheet.targetCredentialId ?: "Unknown", "FAILED", "Decryption denied: ${err.message}")
-                        handleAuthFailure(err.message ?: "Autentikasi gagal")
+                        handleAuthFailure(err.message ?: "Authentication failed")
                     }
                 }
                 AuthSheetAction.ADD_PHYSICAL_KEY -> {
@@ -275,10 +280,10 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
                     regResult.onSuccess {
                         closeAuthSheet()
                         repository.logAuditEvent("KEY_REGISTER", sheet.pendingLabel, "SUCCESS", "Registered physical NFC card $rawUid")
-                        showStatus("Kunci fisik baru '${sheet.pendingLabel}' berhasil didaftarkan.")
+                        showStatus("Security key '${sheet.pendingLabel}' registered successfully.")
                     }.onFailure { err ->
                         repository.logAuditEvent("KEY_REGISTER", sheet.pendingLabel, "FAILED", "Key registration rejected: ${err.message}")
-                        handleAuthFailure(err.message ?: "Registrasi kartu gagal")
+                        handleAuthFailure(err.message ?: "Card registration failed")
                     }
                 }
                 AuthSheetAction.EXPORT_VAULT -> {
@@ -287,10 +292,10 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
                         _uiState.value = _uiState.value.copy(failureCount = 0)
                         closeAuthSheet()
                         repository.logAuditEvent("EXPORT_VAULT", "Backup", "SUCCESS", "Export authorized via BiometricPrompt")
-                        showStatus("Otorisasi hardware disetujui. Siap generate file .loker.")
+                        showStatus("Hardware authorization granted. Ready to generate .loker archive.")
                     }.onFailure { err ->
                         repository.logAuditEvent("EXPORT_VAULT", "Backup", "FAILED", "Export denied: ${err.message}")
-                        handleAuthFailure(err.message ?: "Otorisasi ekspor gagal")
+                        handleAuthFailure(err.message ?: "Export authorization failed")
                     }
                 }
             }
@@ -302,10 +307,10 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
         logAuditEvent("ACCESS_DENIED", "Vault", "FAILED", "Access denied (Attempt $newFailures/3): $message")
         if (newFailures >= 3) {
             startLockoutTimer(30)
-            showStatus("3x Kegagalan autentikasi! Lockout sistem 30 detik diaktifkan.")
+            showStatus("3x Authentication failures! System lockout for 30s enforced.")
         } else {
             _uiState.value = _uiState.value.copy(failureCount = newFailures)
-            showStatus("$message (Percobaan $newFailures dari 3)")
+            showStatus("$message (Attempt $newFailures of 3)")
         }
     }
 
@@ -320,7 +325,7 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
             }
             _uiState.value = _uiState.value.copy(lockoutSeconds = 0, failureCount = 0)
             logAuditEvent("LOCKOUT_LIFTED", "System", "SUCCESS", "System lockout cooldown period expired")
-            showStatus("Lockout berakhir. Anda dapat mencoba kembali.")
+            showStatus("Lockout lifted. You may now retry.")
         }
     }
 
@@ -352,11 +357,11 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
                     cancelRevealTimer()
                     if (isHighRisk) {
                         KeyStorage.wipeImmediateHighRisk()
-                        showStatus("Plan A: Kredensial High-Risk & kunci di-wipe dari RAM.")
+                        showStatus("Ephemeral Policy: High-Risk credential & key wiped from RAM.")
                     }
                 }
             }.onFailure { err ->
-                showStatus("Gagal mendekripsi password: ${err.message}")
+                showStatus("Failed to decrypt password: ${err.message}")
             }
         }
     }
@@ -385,10 +390,10 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
                 id, serviceName, username, passwordPlain, targetType, targetId, securityCategory, notes
             )
             res.onSuccess {
-                showStatus(if (id == null) "Kredensial '$serviceName' berhasil dienkripsi dan disimpan." else "Kredensial '$serviceName' diperbarui.")
+                showStatus(if (id == null) "Credential '$serviceName' encrypted and stored." else "Credential '$serviceName' updated.")
                 navigateTo(ScreenState.Dashboard)
             }.onFailure { err ->
-                showStatus("Gagal menyimpan: ${err.message}")
+                showStatus("Failed to store: ${err.message}")
             }
         }
     }
@@ -396,7 +401,7 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
     fun deleteCredential(id: String) {
         viewModelScope.launch {
             container.deleteCredentialUseCase(id)
-            showStatus("Kredensial berhasil dihapus dari Vault.")
+            showStatus("Credential deleted from Vault.")
             navigateTo(ScreenState.Dashboard)
         }
     }
@@ -404,7 +409,7 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
     fun updateRiskCategory(id: String, category: SecurityCategory) {
         viewModelScope.launch {
             repository.updateSecurityCategory(id, category)
-            showStatus("Kategori keamanan diubah ke ${category.name}.")
+            showStatus("Security category updated to ${category.name}.")
         }
     }
 
@@ -412,9 +417,9 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val res = repository.removePhysicalKey(uidHash)
             res.onSuccess {
-                showStatus("Kunci fisik berhasil dihapus.")
+                showStatus("Physical key revoked successfully.")
             }.onFailure { err ->
-                showStatus("Gagal menghapus kunci: ${err.message}")
+                showStatus("Failed to revoke key: ${err.message}")
             }
         }
     }
@@ -423,9 +428,9 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val res = container.renamePhysicalKeyUseCase(uidHash, newLabel)
             res.onSuccess {
-                showStatus("Label kunci berhasil diperbarui.")
+                showStatus("Key label updated successfully.")
             }.onFailure { err ->
-                showStatus("Gagal mengubah label: ${err.message}")
+                showStatus("Failed to rename label: ${err.message}")
             }
         }
     }
@@ -434,9 +439,9 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val res = container.makePhysicalKeyPrimaryUseCase(uidHash)
             res.onSuccess {
-                showStatus("Kunci fisik berhasil ditetapkan sebagai Primary Key.")
+                showStatus("Physical key set as Primary Key.")
             }.onFailure { err ->
-                showStatus("Gagal menetapkan kunci utama: ${err.message}")
+                showStatus("Failed to set primary key: ${err.message}")
             }
         }
     }
@@ -449,9 +454,9 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
                     isUnlocked = true,
                     currentScreen = ScreenState.Dashboard
                 )
-                showStatus("Pemulihan Vault darurat berhasil! Kunci baru didaftarkan.")
+                showStatus("Emergency recovery successful! New key enrolled.")
             }.onFailure { err ->
-                showStatus("Pemulihan gagal: ${err.message}")
+                showStatus("Recovery failed: ${err.message}")
             }
         }
     }
@@ -461,9 +466,9 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
             val res = container.exportVaultUseCase(backupPassword)
             res.onSuccess { content ->
                 _uiState.value = _uiState.value.copy(exportedLokerContent = content)
-                showStatus("File .loker terenkripsi AES-256-GCM berhasil di-generate!")
+                showStatus("Encrypted .loker backup archive generated successfully.")
             }.onFailure { err ->
-                showStatus("Gagal export .loker: ${err.message}")
+                showStatus("Failed to export .loker: ${err.message}")
             }
         }
     }
@@ -472,10 +477,10 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val res = container.importVaultUseCase(lokerContent, backupPassword, currentUid)
             res.onSuccess { count ->
-                showStatus("Berhasil merestore $count kredensial dari file .loker!")
+                showStatus("Successfully restored $count credentials from .loker archive.")
                 navigateTo(ScreenState.Dashboard)
             }.onFailure { err ->
-                showStatus("Gagal import .loker: ${err.message}")
+                showStatus("Failed to import .loker: ${err.message}")
             }
         }
     }
@@ -483,7 +488,37 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
     fun lockVaultNow() {
         KeyStorage.clear()
         cancelRevealTimer()
-        showStatus("Vault dikunci. Seluruh kunci didegradasi dari RAM.")
+        showStatus("Vault locked. All keys zeroized from memory.")
+    }
+
+    fun lockApp(packageName: String, appName: String) {
+        viewModelScope.launch {
+            repository.lockApp(packageName, appName).onSuccess {
+                showStatus("Application $appName is now locked with hardware security card.")
+            }.onFailure { err ->
+                showStatus("Failed to lock application: ${err.message}")
+            }
+        }
+    }
+
+    fun unlockAppPermanently(packageName: String) {
+        viewModelScope.launch {
+            repository.unlockAppPermanently(packageName).onSuccess {
+                showStatus("Application lock removed.")
+            }.onFailure { err ->
+                showStatus("Failed to remove lock: ${err.message}")
+            }
+        }
+    }
+
+    fun toggleAppLock(packageName: String, isEnabled: Boolean) {
+        viewModelScope.launch {
+            repository.toggleAppLockStatus(packageName, isEnabled).onSuccess {
+                showStatus(if (isEnabled) "Application lock enabled." else "Application lock temporarily disabled.")
+            }.onFailure { err ->
+                showStatus("Failed to update status: ${err.message}")
+            }
+        }
     }
 
     fun clearStatusMessage() {

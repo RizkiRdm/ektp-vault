@@ -151,7 +151,7 @@ fun AddEditCredentialScreen(
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Kembali",
+                            contentDescription = "Back",
                             tint = SovereignInk
                         )
                     }
@@ -434,7 +434,7 @@ fun AddEditCredentialScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = if (showManualPackageInput) "▼ Sembunyikan Input Manual Package" else "▶ Atau Masukkan Package Name Manual",
+                            text = if (showManualPackageInput) "▼ Hide Manual Package Input" else "▶ Or Enter Package Name Manually",
                             color = SovereignViolet,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium
@@ -694,15 +694,15 @@ fun AddEditCredentialScreen(
             Button(
                 onClick = {
                     if (serviceName.isBlank()) {
-                        validationError = "Nama service tidak boleh kosong."
+                        validationError = "Service name cannot be empty."
                         return@Button
                     }
                     if (username.isBlank()) {
-                        validationError = "Username tidak boleh kosong."
+                        validationError = "Username cannot be empty."
                         return@Button
                     }
                     if (!isEditing && password.isBlank()) {
-                        validationError = "Password wajib diisi untuk kredensial baru."
+                        validationError = "Password is required for new credentials."
                         return@Button
                     }
 

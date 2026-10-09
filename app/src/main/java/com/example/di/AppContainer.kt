@@ -62,6 +62,7 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
             physicalKeyDao = database.physicalKeyDao(),
             securityMetaDao = database.securityMetaDao(),
             auditLogDao = database.auditLogDao(),
+            lockedAppDao = database.lockedAppDao(),
             securityEngine = securityEngine
         )
     }

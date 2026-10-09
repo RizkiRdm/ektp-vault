@@ -42,6 +42,7 @@ class SecurityAndKeyLifecycleTest {
             physicalKeyDao = db.physicalKeyDao(),
             securityMetaDao = db.securityMetaDao(),
             auditLogDao = db.auditLogDao(),
+            lockedAppDao = db.lockedAppDao(),
             securityEngine = CryptoManager
         )
     }
@@ -214,5 +215,61 @@ class SecurityAndKeyLifecycleTest {
         val newKeyHash = CryptoManager.hashNfcUid(newRawUid)
         val primary = keys.find { it.isPrimary }
         assertEquals(newKeyHash, primary?.uidHash)
+    }
+
+    @Test
+    fun `app lock lifecycle lock app toggle status and unlock permanently`() = runBlocking {
+        val packageName = "com.bca"
+        val appName = "BCA Mobile"
+
+        assertFalse(repository.isAppLocked(packageName))
+
+        // Lock App
+        val lockRes = repository.lockApp(packageName, appName)
+        assertTrue(lockRes.isSuccess)
+        assertTrue(repository.isAppLocked(packageName))
+
+        val lockedList = repository.getAllLockedApps().first()
+        assertEquals(1, lockedList.size)
+        assertEquals(packageName, lockedList[0].packageName)
+        assertEquals(appName, lockedList[0].appName)
+        assertTrue(lockedList[0].isEnabled)
+
+        // Toggle off
+        val toggleRes = repository.toggleAppLockStatus(packageName, false)
+        assertTrue(toggleRes.isSuccess)
+        assertFalse(repository.isAppLocked(packageName))
+
+        // Toggle on
+        repository.toggleAppLockStatus(packageName, true)
+        assertTrue(repository.isAppLocked(packageName))
+
+        // Unlock permanently
+        val unlockRes = repository.unlockAppPermanently(packageName)
+        assertTrue(unlockRes.isSuccess)
+        assertFalse(repository.isAppLocked(packageName))
+        assertEquals(0, repository.getAllLockedApps().first().size)
+    }
+
+    @Test
+    fun `credentials matched correctly for target application and web domain`() = runBlocking {
+        val rawUid = "04:12:34:56:78:90"
+        val bioSecret = "BIO_SECRET_TEST_999"
+        repository.setupInitialVault(rawUid, bioSecret, "KTP Utama")
+
+        // Add 1 app credential and 1 web domain credential
+        repository.addCredential("BCA Mobile", "user_bca", "BcaPass#123", TargetType.APP, "com.bca", SecurityCategory.STANDARD, "")
+        repository.addCredential("Instagram Web", "user_ig", "IgPass#123", TargetType.WEB, "instagram.com", SecurityCategory.STANDARD, "")
+
+        val bcaCreds = repository.getCredentialsForTarget("com.bca")
+        assertEquals(1, bcaCreds.size)
+        assertEquals("user_bca", bcaCreds[0].username)
+
+        val igCreds = repository.getCredentialsForTarget("instagram.com")
+        assertEquals(1, igCreds.size)
+        assertEquals("user_ig", igCreds[0].username)
+
+        val emptyCreds = repository.getCredentialsForTarget("com.unknown.app")
+        assertEquals(0, emptyCreds.size)
     }
 }
