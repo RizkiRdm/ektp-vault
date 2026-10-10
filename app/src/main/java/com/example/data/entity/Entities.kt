@@ -75,5 +75,6 @@ data class LockedAppEntity(
     val lockedAt: Long = System.currentTimeMillis(),
     val isEnabled: Boolean = true,
     val unlockDurationMinutes: Int = 0,
-    val lastUnlockedTimestamp: Long = 0L
+    val lastUnlockedTimestamp: Long = 0L,
+    val targetType: String = "APP"
 )

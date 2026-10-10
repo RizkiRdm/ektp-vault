@@ -118,7 +118,7 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun checkInitialization() {
         viewModelScope.launch {
-            val prefs = getApplication<Application>().getSharedPreferences("loker_vault_prefs", android.content.Context.MODE_PRIVATE)
+            val prefs = getApplication<Application>().getSharedPreferences("ktp_vault_prefs", android.content.Context.MODE_PRIVATE)
             val onboardingCompleted = prefs.getBoolean("onboarding_completed", false)
             val initialized = repository.isVaultInitialized()
 
@@ -136,8 +136,8 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun completeOnboarding() {
-        val prefs = getApplication<Application>().getSharedPreferences("loker_vault_prefs", android.content.Context.MODE_PRIVATE)
-        prefs.edit().putBoolean("onboarding_completed", true).apply()
+        val prefs = getApplication<Application>().getSharedPreferences("ktp_vault_prefs", android.content.Context.MODE_PRIVATE)
+        prefs.edit().putBoolean("onboarding_completed", true).commit()
         val nextScreen = if (_uiState.value.isInitialized) ScreenState.Dashboard else ScreenState.InitialSetup
         _uiState.value = _uiState.value.copy(currentScreen = nextScreen)
     }
@@ -491,12 +491,27 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
         showStatus("Vault locked. All keys zeroized from memory.")
     }
 
-    fun lockApp(packageName: String, appName: String) {
+    fun lockApp(
+        packageName: String,
+        appName: String,
+        targetType: com.example.domain.model.TargetType = com.example.domain.model.TargetType.APP,
+        unlockDurationMinutes: Int = 0
+    ) {
         viewModelScope.launch {
-            repository.lockApp(packageName, appName).onSuccess {
-                showStatus("Application $appName is now locked with hardware security card.")
+            repository.lockApp(packageName, appName, targetType, unlockDurationMinutes).onSuccess {
+                showStatus("$appName sekarang dikunci dengan LOKER.")
             }.onFailure { err ->
-                showStatus("Failed to lock application: ${err.message}")
+                showStatus("Gagal mengunci target: ${err.message}")
+            }
+        }
+    }
+
+    fun updateAppLockDuration(packageName: String, durationMinutes: Int) {
+        viewModelScope.launch {
+            repository.updateAppLockDuration(packageName, durationMinutes).onSuccess {
+                showStatus("Waktu kunci ulang diperbarui.")
+            }.onFailure { err ->
+                showStatus("Gagal memperbarui waktu: ${err.message}")
             }
         }
     }

@@ -357,7 +357,8 @@ fun VaultApp(
                     AppLockManagerScreen(
                         lockedApps = lockedApps,
                         onBack = { viewModel.navigateTo(ScreenState.Dashboard) },
-                        onLockNewApp = { pkg, name -> viewModel.lockApp(pkg, name) },
+                        onLockNewApp = { pkg, name, type, duration -> viewModel.lockApp(pkg, name, type, duration) },
+                        onUpdateLockDuration = { pkg, duration -> viewModel.updateAppLockDuration(pkg, duration) },
                         onToggleLockStatus = { pkg, enabled -> viewModel.toggleAppLock(pkg, enabled) },
                         onRemoveLockedApp = { pkg -> viewModel.unlockAppPermanently(pkg) }
                     )

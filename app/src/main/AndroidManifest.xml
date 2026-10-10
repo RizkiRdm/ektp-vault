@@ -80,7 +80,8 @@
             android:name=".ui.screens.applock.AppLockActivity"
             android:exported="false"
             android:excludeFromRecents="true"
-            android:launchMode="singleTop"
+            android:launchMode="singleTask"
+            android:taskAffinity="com.example.applock"
             android:theme="@style/Theme.MyApplication" />
 
         <!-- Autofill Authentication Modal Activity -->

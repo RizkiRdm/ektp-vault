@@ -245,7 +245,7 @@ class VaultRepository(
         try {
             val count = physicalKeyDao.getPhysicalKeysCount()
             if (count <= 1) {
-                return@withContext Result.failure(IllegalStateException("At least one registered security key must remain."))
+                return@withContext Result.failure(IllegalStateException("Minimal satu kartu fisik harus tetap terdaftar."))
             }
             val entity = physicalKeyDao.getPhysicalKeyByHash(uidHash)
                 ?: return@withContext Result.failure(IllegalArgumentException("Security key not found."))
@@ -521,23 +521,40 @@ class VaultRepository(
                     lockedAt = it.lockedAt,
                     isEnabled = it.isEnabled,
                     unlockDurationMinutes = it.unlockDurationMinutes,
-                    lastUnlockedTimestamp = it.lastUnlockedTimestamp
+                    lastUnlockedTimestamp = it.lastUnlockedTimestamp,
+                    targetType = try { com.example.domain.model.TargetType.valueOf(it.targetType) } catch (_: Exception) { com.example.domain.model.TargetType.APP }
                 )
             }
         }
     }
 
-    override suspend fun lockApp(packageName: String, appName: String): Result<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun lockApp(
+        packageName: String,
+        appName: String,
+        targetType: com.example.domain.model.TargetType,
+        unlockDurationMinutes: Int
+    ): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             lockedAppDao.insertLockedApp(
                 LockedAppEntity(
                     packageName = packageName,
                     appName = appName,
                     lockedAt = System.currentTimeMillis(),
-                    isEnabled = true
+                    isEnabled = true,
+                    unlockDurationMinutes = unlockDurationMinutes,
+                    targetType = targetType.name
                 )
             )
-            logAuditEvent("APP_LOCKED", appName, "SUCCESS", "Application $appName ($packageName) locked with hardware security card.")
+            logAuditEvent("APP_LOCKED", appName, "SUCCESS", "Target $appName ($packageName) locked (${targetType.name}).")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun updateAppLockDuration(packageName: String, durationMinutes: Int): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            lockedAppDao.updateUnlockDuration(packageName, durationMinutes)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)

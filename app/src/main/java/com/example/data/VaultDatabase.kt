@@ -25,7 +25,7 @@ import com.example.data.entity.SecurityMetaEntity
         AuditLogEntity::class,
         LockedAppEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class VaultDatabase : RoomDatabase() {
@@ -73,6 +73,12 @@ abstract class VaultDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE locked_apps ADD COLUMN targetType TEXT NOT NULL DEFAULT 'APP'")
+            }
+        }
+
         fun getDatabase(context: Context): VaultDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -80,7 +86,8 @@ abstract class VaultDatabase : RoomDatabase() {
                     VaultDatabase::class.java,
                     "ktp_vault.db"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_1_3, MIGRATION_3_4, MIGRATION_1_4)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_1_3, MIGRATION_3_4, MIGRATION_1_4, MIGRATION_4_5)
+                    .fallbackToDestructiveMigration(dropAllTables = false)
                     .build()
                 INSTANCE = instance
                 instance

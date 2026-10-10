@@ -4,6 +4,7 @@ import android.content.Intent
 import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,27 +17,34 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -45,6 +53,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -55,9 +64,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.domain.model.LockedApp
+import com.example.domain.model.TargetType
 import com.example.security.AppLockManager
 import com.example.ui.components.AppIconView
 import com.example.ui.components.AppPickerBottomSheet
@@ -72,18 +83,31 @@ import com.example.ui.theme.SignalWhite
 import com.example.ui.theme.SovereignInk
 import com.example.ui.theme.SovereignViolet
 
+enum class LockSectionTab {
+    APPS,
+    DOMAINS
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppLockManagerScreen(
     lockedApps: List<LockedApp>,
     onBack: () -> Unit,
-    onLockNewApp: (packageName: String, appName: String) -> Unit,
+    onLockNewApp: (packageName: String, appName: String, targetType: TargetType, durationMinutes: Int) -> Unit,
+    onUpdateLockDuration: (packageName: String, durationMinutes: Int) -> Unit,
     onToggleLockStatus: (packageName: String, isEnabled: Boolean) -> Unit,
     onRemoveLockedApp: (packageName: String) -> Unit
 ) {
     val context = LocalContext.current
+    var selectedTab by remember { mutableStateOf(LockSectionTab.APPS) }
     var showAppPicker by remember { mutableStateOf(false) }
+    var showAddDomainDialog by remember { mutableStateOf(false) }
+    var domainInput by remember { mutableStateOf("") }
+    var domainTimeoutChoice by remember { mutableIntStateOf(1) } // default 1 minute
+
     var appToDelete by remember { mutableStateOf<LockedApp?>(null) }
+    var appToEditDuration by remember { mutableStateOf<LockedApp?>(null) }
+
     val installedApps = remember {
         AppPickerHelper.getInstalledApps(context)
     }
@@ -92,23 +116,243 @@ fun AppLockManagerScreen(
         AppLockManager.isAccessibilityEnabled(context)
     }
 
+    val appItems = remember(lockedApps) {
+        lockedApps.filter { it.targetType == TargetType.APP }
+    }
+
+    val domainItems = remember(lockedApps) {
+        lockedApps.filter { it.targetType == TargetType.WEB }
+    }
+
+    fun formatDurationLabel(minutes: Int): String {
+        return when (minutes) {
+            -1 -> "30 Detik"
+            0 -> "Segera saat keluar"
+            1 -> "1 Menit"
+            5 -> "5 Menit"
+            15 -> "15 Menit"
+            30 -> "30 Menit"
+            else -> if (minutes > 0) "$minutes Menit" else "Segera saat keluar"
+        }
+    }
+
+    // App Picker Modal
     AppPickerBottomSheet(
         isOpen = showAppPicker,
         apps = installedApps,
         onDismiss = { showAppPicker = false },
         onAppSelected = { selected ->
             showAppPicker = false
-            onLockNewApp(selected.packageName, selected.appName)
+            onLockNewApp(selected.packageName, selected.appName, TargetType.APP, 1)
         }
     )
 
+    // Add Domain Dialog
+    if (showAddDomainDialog) {
+        AlertDialog(
+            onDismissRequest = { showAddDomainDialog = false },
+            title = {
+                Text(
+                    text = "KUNCI DOMAIN / SITUS",
+                    color = SovereignInk,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = GoldenRatio.TextBase
+                )
+            },
+            text = {
+                Column {
+                    Text(
+                        text = "Masukkan domain situs web yang ingin dilindungi saat dibuka di browser (Chrome, Samsung Internet, dll.).",
+                        color = CarbonGray,
+                        fontSize = GoldenRatio.TextMicro
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    OutlinedTextField(
+                        value = domainInput,
+                        onValueChange = { domainInput = it },
+                        placeholder = { Text("contoh: instagram.com", fontSize = GoldenRatio.TextSmall) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = SovereignViolet,
+                            unfocusedBorderColor = CoolHairline
+                        ),
+                        shape = RoundedCornerShape(10.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = "Saran Cepat:",
+                        fontSize = GoldenRatio.TextMicro,
+                        color = CarbonGray,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    val suggestions = listOf("instagram.com", "tiktok.com", "facebook.com", "x.com", "reddit.com", "youtube.com")
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        items(suggestions) { item ->
+                            Box(
+                                modifier = Modifier
+                                    .background(Color(0xFFEDE9FE), RoundedCornerShape(8.dp))
+                                    .clickable { domainInput = item }
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Text(item, fontSize = GoldenRatio.TextMicro, color = SovereignViolet)
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "Waktu Kunci Ulang Setelah Keluar:",
+                        fontSize = GoldenRatio.TextMicro,
+                        color = CarbonGray,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    val timeoutOptions = listOf(0 to "Segera", 1 to "1 Menit", 5 to "5 Menit")
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        timeoutOptions.forEach { (mins, label) ->
+                            FilterChip(
+                                selected = domainTimeoutChoice == mins,
+                                onClick = { domainTimeoutChoice = mins },
+                                label = { Text(label, fontSize = GoldenRatio.TextMicro) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = SovereignInk,
+                                    selectedLabelColor = SignalWhite
+                                )
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val clean = domainInput.trim().lowercase()
+                            .removePrefix("https://").removePrefix("http://").removePrefix("www.")
+                            .substringBefore("/")
+                        if (clean.isNotBlank()) {
+                            onLockNewApp(clean, clean, TargetType.WEB, domainTimeoutChoice)
+                            showAddDomainDialog = false
+                            domainInput = ""
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = SovereignInk),
+                    shape = RoundedCornerShape(9999.dp)
+                ) {
+                    Text("KUNCI SITUS", color = SignalWhite, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { showAddDomainDialog = false },
+                    shape = RoundedCornerShape(9999.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, CoolHairline)
+                ) {
+                    Text("BATAL", color = SovereignInk)
+                }
+            },
+            containerColor = SignalWhite,
+            shape = RoundedCornerShape(16.dp)
+        )
+    }
+
+    // Change Relock Timeout Dialog
+    if (appToEditDuration != null) {
+        val target = appToEditDuration!!
+        var selectedMinutes by remember(target.unlockDurationMinutes) {
+            mutableIntStateOf(target.unlockDurationMinutes)
+        }
+
+        AlertDialog(
+            onDismissRequest = { appToEditDuration = null },
+            title = {
+                Text(
+                    text = "ATUR WAKTU KUNCI ULANG",
+                    color = SovereignInk,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = GoldenRatio.TextBase
+                )
+            },
+            text = {
+                Column {
+                    Text(
+                        text = "Pilih kapan '${target.appName}' akan otomatis terkunci kembali setelah Anda keluar dari aplikasi:",
+                        color = CarbonGray,
+                        fontSize = GoldenRatio.TextSmall
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    val options = listOf(
+                        0 to "Segera (Langsung terkunci saat keluar)",
+                        -1 to "30 Detik setelah keluar",
+                        1 to "1 Menit setelah keluar (Direkomendasikan)",
+                        5 to "5 Menit setelah keluar",
+                        15 to "15 Menit setelah keluar"
+                    )
+
+                    options.forEach { (mins, label) ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { selectedMinutes = mins }
+                                .padding(vertical = 6.dp)
+                        ) {
+                            RadioButton(
+                                selected = selectedMinutes == mins,
+                                onClick = { selectedMinutes = mins },
+                                colors = RadioButtonDefaults.colors(selectedColor = SovereignViolet)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = label,
+                                fontSize = GoldenRatio.TextSmall,
+                                color = SovereignInk
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onUpdateLockDuration(target.packageName, selectedMinutes)
+                        appToEditDuration = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = SovereignInk),
+                    shape = RoundedCornerShape(9999.dp)
+                ) {
+                    Text("SIMPAN", color = SignalWhite, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { appToEditDuration = null },
+                    shape = RoundedCornerShape(9999.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, CoolHairline)
+                ) {
+                    Text("BATAL", color = SovereignInk)
+                }
+            },
+            containerColor = SignalWhite,
+            shape = RoundedCornerShape(16.dp)
+        )
+    }
+
+    // Delete Confirmation Dialog
     if (appToDelete != null) {
         val target = appToDelete!!
         AlertDialog(
             onDismissRequest = { appToDelete = null },
             title = {
                 Text(
-                    text = "REMOVE APP LOCK",
+                    text = "HAPUS KUNCI",
                     color = AlertCrimson,
                     fontWeight = FontWeight.Bold,
                     fontSize = GoldenRatio.TextBase
@@ -116,7 +360,7 @@ fun AppLockManagerScreen(
             },
             text = {
                 Text(
-                    text = "App '${target.appName}' will no longer be protected by your security key. Anyone will be able to launch it freely.",
+                    text = "Proteksi kunci untuk '${target.appName}' akan dihapus.",
                     color = SovereignInk,
                     fontSize = GoldenRatio.TextSmall
                 )
@@ -130,7 +374,7 @@ fun AppLockManagerScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = AlertCrimson),
                     shape = RoundedCornerShape(9999.dp)
                 ) {
-                    Text("REMOVE LOCK", color = SignalWhite, fontWeight = FontWeight.Medium)
+                    Text("HAPUS", color = SignalWhite, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -139,7 +383,7 @@ fun AppLockManagerScreen(
                     shape = RoundedCornerShape(9999.dp),
                     border = androidx.compose.foundation.BorderStroke(1.dp, CoolHairline)
                 ) {
-                    Text("CANCEL", color = SovereignInk)
+                    Text("BATAL", color = SovereignInk)
                 }
             },
             containerColor = SignalWhite,
@@ -154,14 +398,14 @@ fun AppLockManagerScreen(
                 title = {
                     Column {
                         Text(
-                            text = "APPLICATION LOCK",
+                            text = "APP & DOMAIN LOCKER",
                             color = SovereignInk,
                             fontSize = GoldenRatio.TextBase,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 0.5.sp
                         )
                         Text(
-                            text = "Lock sensitive apps with physical security key",
+                            text = "Kunci aplikasi dan situs web dengan LOKER Shield",
                             color = CarbonGray,
                             fontSize = GoldenRatio.TextMicro
                         )
@@ -205,26 +449,48 @@ fun AppLockManagerScreen(
                     .border(0.5.dp, CoolHairline)
                     .padding(GoldenRatio.SpaceBase)
             ) {
-                Button(
-                    onClick = { showAppPicker = true },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp)
-                        .testTag("add_locked_app_button"),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = SovereignInk,
-                        contentColor = SignalWhite
-                    ),
-                    shape = RoundedCornerShape(9999.dp)
-                ) {
-                    Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(GoldenRatio.SpaceSmall))
-                    Text(
-                        text = "+ LOCK ANOTHER APPLICATION",
-                        fontWeight = FontWeight.Medium,
-                        fontSize = GoldenRatio.TextSmall,
-                        letterSpacing = 0.5.sp
-                    )
+                if (selectedTab == LockSectionTab.APPS) {
+                    Button(
+                        onClick = { showAppPicker = true },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .testTag("add_locked_app_button"),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = SovereignInk,
+                            contentColor = SignalWhite
+                        ),
+                        shape = RoundedCornerShape(9999.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(GoldenRatio.SpaceSmall))
+                        Text(
+                            text = "+ KUNCI APLIKASI BARU",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = GoldenRatio.TextSmall
+                        )
+                    }
+                } else {
+                    Button(
+                        onClick = { showAddDomainDialog = true },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .testTag("add_locked_domain_button"),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = SovereignInk,
+                            contentColor = SignalWhite
+                        ),
+                        shape = RoundedCornerShape(9999.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.Language, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(GoldenRatio.SpaceSmall))
+                        Text(
+                            text = "+ KUNCI DOMAIN / SITUS BARU",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = GoldenRatio.TextSmall
+                        )
+                    }
                 }
             }
         }
@@ -235,72 +501,6 @@ fun AppLockManagerScreen(
                 .padding(innerPadding)
                 .padding(horizontal = GoldenRatio.SpaceLarge, vertical = GoldenRatio.SpaceBase)
         ) {
-            // Explanation Banner
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(SignalWhite, RoundedCornerShape(12.dp))
-                    .border(1.dp, CoolHairline, RoundedCornerShape(12.dp))
-                    .padding(GoldenRatio.SpaceBase)
-            ) {
-                Column {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .background(Color(0xFFEDE9FE), CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(imageVector = Icons.Default.Lock, contentDescription = null, tint = SovereignViolet, modifier = Modifier.size(18.dp))
-                        }
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Column {
-                            Text(
-                                text = "Protected Applications",
-                                color = SovereignInk,
-                                fontSize = GoldenRatio.TextSmall,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "Locked apps below can only be opened by tapping your registered hardware key and biometric verification.",
-                                color = CarbonGray,
-                                fontSize = GoldenRatio.TextMicro,
-                                lineHeight = 15.sp
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    // Test Lock Button
-                    Button(
-                        onClick = {
-                            val testTarget = lockedApps.firstOrNull()?.packageName ?: "com.example.sample"
-                            val testIntent = Intent(context, AppLockActivity::class.java).apply {
-                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                putExtra(AppLockActivity.EXTRA_TARGET_PACKAGE, testTarget)
-                            }
-                            context.startActivity(testIntent)
-                        },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFF0EBFD),
-                            contentColor = SovereignViolet
-                        ),
-                        shape = RoundedCornerShape(9999.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(36.dp)
-                            .testTag("test_app_lock_button")
-                    ) {
-                        Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Test App Lock Shield Now", fontSize = GoldenRatio.TextMicro, fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(GoldenRatio.SpaceBase))
-
             // Accessibility Service Warning if disabled
             if (!isAccessibilityActive) {
                 Box(
@@ -315,7 +515,7 @@ fun AppLockManagerScreen(
                             Icon(imageVector = Icons.Default.Warning, contentDescription = null, tint = Color(0xFFB45309), modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "Accessibility Service Required",
+                                text = "Layanan Aksesibilitas Diperlukan",
                                 color = Color(0xFFB45309),
                                 fontSize = GoldenRatio.TextSmall,
                                 fontWeight = FontWeight.Bold
@@ -323,7 +523,7 @@ fun AppLockManagerScreen(
                         }
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = "Enable 'LOKER App Lock' in Android Accessibility settings so the system can intercept locked applications immediately on launch.",
+                            text = "Aktifkan 'LOKER App Lock' di setelan Aksesibilitas agar sistem dapat memblokir aplikasi dan domain situs terlindungi secara instan saat dibuka.",
                             color = SovereignInk,
                             fontSize = GoldenRatio.TextMicro,
                             lineHeight = 15.sp
@@ -338,31 +538,101 @@ fun AppLockManagerScreen(
                             border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFB45309)),
                             modifier = Modifier.height(32.dp)
                         ) {
-                            Text("Open Accessibility Settings", fontSize = GoldenRatio.TextMicro, color = Color(0xFFB45309), fontWeight = FontWeight.Medium)
+                            Text("Buka Setelan Aksesibilitas", fontSize = GoldenRatio.TextMicro, color = Color(0xFFB45309), fontWeight = FontWeight.Bold)
                         }
                     }
                 }
                 Spacer(modifier = Modifier.height(GoldenRatio.SpaceBase))
             }
 
-            // Locked Apps List
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            // Test Lock Shield Button
+            Button(
+                onClick = {
+                    val testTarget = if (selectedTab == LockSectionTab.APPS) {
+                        appItems.firstOrNull()?.packageName ?: "com.example.sample"
+                    } else {
+                        domainItems.firstOrNull()?.packageName ?: "instagram.com"
+                    }
+                    val testIntent = Intent(context, AppLockActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                        putExtra(AppLockActivity.EXTRA_TARGET_PACKAGE, testTarget)
+                        if (selectedTab == LockSectionTab.DOMAINS) {
+                            putExtra(AppLockActivity.EXTRA_TARGET_DOMAIN, testTarget)
+                            putExtra(AppLockActivity.EXTRA_IS_DOMAIN, true)
+                        }
+                    }
+                    context.startActivity(testIntent)
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFF0EBFD),
+                    contentColor = SovereignViolet
+                ),
+                shape = RoundedCornerShape(9999.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(38.dp)
+                    .testTag("test_app_lock_button")
             ) {
-                Text(
-                    text = "LOCKED APPLICATIONS (${lockedApps.size})",
-                    color = SovereignViolet,
-                    fontSize = GoldenRatio.TextMicro,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp
-                )
+                Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("Uji Layar Kunci (App Lock Shield)", fontSize = GoldenRatio.TextMicro, fontWeight = FontWeight.Bold)
             }
 
-            Spacer(modifier = Modifier.height(GoldenRatio.SpaceSmall))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            if (lockedApps.isEmpty()) {
+            // Tab Bar: Aplikasi vs Domain
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(SignalWhite, RoundedCornerShape(12.dp))
+                    .border(1.dp, CoolHairline, RoundedCornerShape(12.dp))
+                    .padding(4.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .background(
+                            if (selectedTab == LockSectionTab.APPS) SovereignInk else Color.Transparent,
+                            RoundedCornerShape(9.dp)
+                        )
+                        .clickable { selectedTab = LockSectionTab.APPS }
+                        .padding(vertical = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "APLIKASI (${appItems.size})",
+                        color = if (selectedTab == LockSectionTab.APPS) SignalWhite else SovereignInk,
+                        fontSize = GoldenRatio.TextMicro,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .background(
+                            if (selectedTab == LockSectionTab.DOMAINS) SovereignInk else Color.Transparent,
+                            RoundedCornerShape(9.dp)
+                        )
+                        .clickable { selectedTab = LockSectionTab.DOMAINS }
+                        .padding(vertical = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "SITUS WEB (${domainItems.size})",
+                        color = if (selectedTab == LockSectionTab.DOMAINS) SignalWhite else SovereignInk,
+                        fontSize = GoldenRatio.TextMicro,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Main List Area
+            val activeList = if (selectedTab == LockSectionTab.APPS) appItems else domainItems
+
+            if (activeList.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -379,21 +649,29 @@ fun AppLockManagerScreen(
                                 .background(Color(0xFFEDE9FE), CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(imageVector = Icons.Default.LockOpen, contentDescription = null, tint = SovereignViolet, modifier = Modifier.size(28.dp))
+                            Icon(
+                                imageVector = if (selectedTab == LockSectionTab.APPS) Icons.Default.LockOpen else Icons.Default.Language,
+                                contentDescription = null,
+                                tint = SovereignViolet,
+                                modifier = Modifier.size(28.dp)
+                            )
                         }
                         Spacer(modifier = Modifier.height(GoldenRatio.SpaceBase))
                         Text(
-                            text = "No Applications Locked",
+                            text = if (selectedTab == LockSectionTab.APPS) "Belum Ada Aplikasi Dikunci" else "Belum Ada Domain Dikunci",
                             color = SovereignInk,
                             fontSize = GoldenRatio.TextSmall,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Select sensitive applications (such as banking, messaging, or gallery) to safeguard them with your hardware security key.",
+                            text = if (selectedTab == LockSectionTab.APPS)
+                                "Tambahkan aplikasi sensitif (e.g. WhatsApp, Galeri, Bank) untuk dilindungi dengan kartu NFC, biometrik, atau password akun."
+                            else
+                                "Tambahkan alamat domain situs web (e.g. instagram.com, tiktok.com) untuk dikunci secara otomatis saat dibuka melalui peramban web.",
                             color = CarbonGray,
                             fontSize = GoldenRatio.TextMicro,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            textAlign = TextAlign.Center,
                             lineHeight = 16.sp
                         )
                     }
@@ -403,13 +681,17 @@ fun AppLockManagerScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.weight(1f)
                 ) {
-                    items(lockedApps, key = { it.packageName }) { app ->
+                    items(activeList, key = { it.packageName }) { app ->
                         val pm = context.packageManager
-                        val appIcon = remember(app.packageName) {
-                            try {
-                                val info = pm.getApplicationInfo(app.packageName, 0)
-                                pm.getApplicationIcon(info)
-                            } catch (_: Exception) {
+                        val appIcon = remember(app.packageName, app.targetType) {
+                            if (app.targetType == TargetType.APP) {
+                                try {
+                                    val info = pm.getApplicationInfo(app.packageName, 0)
+                                    pm.getApplicationIcon(info)
+                                } catch (_: Exception) {
+                                    null
+                                }
+                            } else {
                                 null
                             }
                         }
@@ -423,7 +705,7 @@ fun AppLockManagerScreen(
                                     if (app.isEnabled) SovereignViolet else CoolHairline,
                                     RoundedCornerShape(12.dp)
                                 )
-                                .padding(GoldenRatio.SpaceBase)
+                                .padding(12.dp)
                         ) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -431,8 +713,20 @@ fun AppLockManagerScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                                    AppIconView(icon = appIcon, modifier = Modifier.size(40.dp))
-                                    Spacer(modifier = Modifier.width(GoldenRatio.SpaceBase))
+                                    if (app.targetType == TargetType.WEB) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(40.dp)
+                                                .background(Color(0xFFEDE9FE), RoundedCornerShape(10.dp)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(imageVector = Icons.Default.Language, contentDescription = null, tint = SovereignViolet, modifier = Modifier.size(22.dp))
+                                        }
+                                    } else {
+                                        AppIconView(icon = appIcon, modifier = Modifier.size(40.dp))
+                                    }
+
+                                    Spacer(modifier = Modifier.width(10.dp))
                                     Column {
                                         Text(
                                             text = app.appName,
@@ -446,12 +740,26 @@ fun AppLockManagerScreen(
                                             fontSize = GoldenRatio.TextMicro,
                                             fontFamily = FontFamily.Monospace
                                         )
-                                        Text(
-                                            text = if (app.isEnabled) "Status: Protected (Hardware Key)" else "Status: Lock Disabled",
-                                            color = if (app.isEnabled) Color(0xFF2E7D32) else CarbonGray,
-                                            fontSize = GoldenRatio.TextMicro,
-                                            fontWeight = FontWeight.Medium
-                                        )
+
+                                        Spacer(modifier = Modifier.height(4.dp))
+
+                                        // Clickable Relock Timeout Badge
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier
+                                                .background(Color(0xFFF3F4F6), RoundedCornerShape(6.dp))
+                                                .clickable { appToEditDuration = app }
+                                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                        ) {
+                                            Icon(imageVector = Icons.Default.Schedule, contentDescription = null, tint = SovereignViolet, modifier = Modifier.size(12.dp))
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(
+                                                text = "Kunci ulang: ${formatDurationLabel(app.unlockDurationMinutes)}",
+                                                color = SovereignInk,
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                        }
                                     }
                                 }
 
@@ -470,7 +778,7 @@ fun AppLockManagerScreen(
                                         modifier = Modifier.testTag("toggle_lock_${app.packageName}")
                                     )
 
-                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
 
                                     IconButton(
                                         onClick = { appToDelete = app },
@@ -478,7 +786,7 @@ fun AppLockManagerScreen(
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.Delete,
-                                            contentDescription = "Delete Lock",
+                                            contentDescription = "Hapus Kunci",
                                             tint = AlertCrimson,
                                             modifier = Modifier.size(20.dp)
                                         )

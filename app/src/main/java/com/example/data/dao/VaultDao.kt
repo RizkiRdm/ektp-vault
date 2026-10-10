@@ -17,6 +17,9 @@ interface CredentialDao {
     @Query("SELECT * FROM credentials ORDER BY lastUsedTimestamp DESC")
     fun getAllCredentials(): Flow<List<CredentialEntity>>
 
+    @Query("SELECT * FROM credentials ORDER BY lastUsedTimestamp DESC")
+    suspend fun getAllCredentialsSync(): List<CredentialEntity>
+
     @Query("SELECT * FROM credentials WHERE targetId = :targetId")
     suspend fun getCredentialsForTarget(targetId: String): List<CredentialEntity>
 
@@ -130,6 +133,9 @@ interface LockedAppDao {
 
     @Query("UPDATE locked_apps SET isEnabled = :isEnabled WHERE packageName = :packageName")
     suspend fun updateAppLockStatus(packageName: String, isEnabled: Boolean)
+
+    @Query("UPDATE locked_apps SET unlockDurationMinutes = :durationMinutes WHERE packageName = :packageName")
+    suspend fun updateUnlockDuration(packageName: String, durationMinutes: Int)
 
     @Query("UPDATE locked_apps SET lastUnlockedTimestamp = :timestamp WHERE packageName = :packageName")
     suspend fun updateLastUnlocked(packageName: String, timestamp: Long)

@@ -37,7 +37,8 @@ interface IVaultRepository {
     suspend fun importVaultFromLoker(lokerContent: String, backupPassword: String, currentNfcUid: String): Result<Int>
     suspend fun logAuditEvent(eventType: String, targetService: String, status: String, details: String)
     fun getAllLockedApps(): Flow<List<com.example.domain.model.LockedApp>>
-    suspend fun lockApp(packageName: String, appName: String): Result<Unit>
+    suspend fun lockApp(packageName: String, appName: String, targetType: com.example.domain.model.TargetType = com.example.domain.model.TargetType.APP, unlockDurationMinutes: Int = 0): Result<Unit>
+    suspend fun updateAppLockDuration(packageName: String, durationMinutes: Int): Result<Unit>
     suspend fun unlockAppPermanently(packageName: String): Result<Unit>
     suspend fun toggleAppLockStatus(packageName: String, isEnabled: Boolean): Result<Unit>
     suspend fun isAppLocked(packageName: String): Boolean
